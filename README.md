@@ -71,21 +71,13 @@
 
 - [:notebook\_with\_decorative\_cover: Table of Contents](#notebook_with_decorative_cover-table-of-contents)
   - [:star2: About the Project](#star2-about-the-project)
-    - [:thought_balloon: Overview](#thought_balloon-overview)
-    - [:space\_invader: Tech Stack](#space_invader-tech-stack)
+    - [:thought\_balloon: Overview](#thought_balloon-overview)
     - [:dart: Features](#dart-features)
-    - [:art: Color Reference](#art-color-reference)
-  - [:toolbox: Getting Started](#toolbox-getting-started)
-    - [:bangbang: Prerequisites](#bangbang-prerequisites)
-    - [⚙️ Installation \&  Run Locally 🏃](#️-installation---run-locally-)
-  - [:wave: Contributing](#wave-contributing)
-  - [:warning: License](#warning-license)
-  - [:handshake: Contact](#handshake-contact)
 
 <!-- About the Project -->
 
 ## :star2: About the Project
 
 ### :thought_balloon: Overview
-CircleHelp is an app designed to assist store managers and employees with their routine tasks. Previously, they had to handle these tasks across various applications or through non-specialized systems (like messaging apps). Now, they can manage everything within a single, specialized system with dedicated features.
+CircleHelp is an app designed to assist store managers and employees with their routine tasks. Previously, they had to handle these repetitive tasks across various applications, through non-specialized systems (like messaging apps) or even manually. Now, they can manage everything within a single, specialized system with dedicated features.
 ### :dart: Features

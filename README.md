@@ -1,12 +1,12 @@
 <div align="center">
 
 <div align="center" style="background-color: black;">
-  <img src="" alt="logo" width="200" height="auto" />
+  <img src="https://i.pinimg.com/736x/c7/07/eb/c707ebdb1f02dd8de1146336973c7401.jpg" alt="logo" width="200" height="auto" />
 </div>
-  <h1>Boarding House Management App</h1>
+  <h1>CircleHelp</h1>
 
 <p>
-    An awesome Boarding House Management system for all House Lending Company! 
+    An awesome Daily work management app for all Convenience store staffs! 
   </p>
 
 

@@ -1,0 +1,1 @@
+spring encodepassword $1

@@ -1,0 +1,200 @@
+{
+	"info": {
+		"_postman_id": "ef308563-7f0f-4503-97df-ee6f5047dbf3",
+		"name": "ShelfAPIs",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "38252074"
+	},
+	"item": [
+		{
+			"name": "GetInventoryItems",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Status code is 200\", function () {\r",
+							"  pm.response.to.have.status(200);\r",
+							"});"
+						],
+						"type": "text/javascript",
+						"packages": {}
+					}
+				}
+			],
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "{{baseUrl}}/api/inventory?searchterm=Apple&minQuantity=0&maxQuantity=10&minPrice=0&sortColumn=Price&ascending=False",
+					"host": [
+						"{{baseUrl}}"
+					],
+					"path": [
+						"api",
+						"inventory"
+					],
+					"query": [
+						{
+							"key": "searchterm",
+							"value": "Apple"
+						},
+						{
+							"key": "minQuantity",
+							"value": "0"
+						},
+						{
+							"key": "maxQuantity",
+							"value": "10"
+						},
+						{
+							"key": "minPrice",
+							"value": "0"
+						},
+						{
+							"key": "sortColumn",
+							"value": "Price"
+						},
+						{
+							"key": "ascending",
+							"value": "False"
+						}
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "GetCompartmentProduct",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Status code is 200\", function () {\r",
+							"  pm.response.to.have.status(200);\r",
+							"});"
+						],
+						"type": "text/javascript",
+						"packages": {}
+					}
+				}
+			],
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "{{baseUrl}}/auth/shelves/get?shelf=1&row=2&compartment=3",
+					"host": [
+						"{{baseUrl}}"
+					],
+					"path": [
+						"auth",
+						"shelves",
+						"get"
+					],
+					"query": [
+						{
+							"key": "shelf",
+							"value": "1"
+						},
+						{
+							"key": "row",
+							"value": "2"
+						},
+						{
+							"key": "compartment",
+							"value": "3"
+						}
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "AutoMoveStock",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Status code is 201\", function () {\r",
+							"  pm.response.to.have.status(201);\r",
+							"});"
+						],
+						"type": "text/javascript",
+						"packages": {}
+					}
+				}
+			],
+			"request": {
+				"method": "PUT",
+				"header": [],
+				"body": {
+					"mode": "formdata",
+					"formdata": [
+						{
+							"key": "ID",
+							"value": "",
+							"type": "text"
+						}
+					]
+				},
+				"url": {
+					"raw": "{{baseUrl}}/auth/shelves/automove",
+					"host": [
+						"{{baseUrl}}"
+					],
+					"path": [
+						"auth",
+						"shelves",
+						"automove"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "ManualMoveStock",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Status code is 201\", function () {\r",
+							"  pm.response.to.have.status(201);\r",
+							"});"
+						],
+						"type": "text/javascript",
+						"packages": {}
+					}
+				}
+			],
+			"request": {
+				"method": "PUT",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\r\n    \"OldLocation\": ID,\r\n    \"NewLocation\": \r\n    {\r\n        \"Shelf\": 1,\r\n        \"Row\": 2,\r\n        \"Compartment\": 3\r\n    }\r\n}\r\n",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{baseUrl}}/auth/shelves/move",
+					"host": [
+						"{{baseUrl}}"
+					],
+					"path": [
+						"auth",
+						"shelves",
+						"move"
+					]
+				}
+			},
+			"response": []
+		}
+	]
+}

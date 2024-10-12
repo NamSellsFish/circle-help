@@ -4,3 +4,6 @@ export { default as Loading } from './mobile/atoms/Loading';
 export { default as AuthWrapper } from './mobile/atoms/AuthWrapper';
 export { default as DisplayError } from './mobile/atoms/DisplayError';
 export { default as HandleResponse } from './mobile/atoms/HandleResponse';
+export { default as CompartmentModal } from './mobile/molecules/CompartmentModal'
+export { default as Specification } from './mobile/atoms/Specification'
+export { default as Modal } from './mobile/atoms/Modal'

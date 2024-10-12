@@ -6,7 +6,8 @@ import org.springframework.security.core.userdetails.UserDetails
 import org.springframework.security.core.userdetails.UsernameNotFoundException
 import org.springframework.security.crypto.password.PasswordEncoder
 import org.springframework.stereotype.Service
-import server.login.api.response.UserDto
+import server.login.api.response.InboundUserDto
+import server.login.entities.Admin
 import server.login.entities.Employee
 import server.login.entities.User
 import server.login.repositories.AccountRepository
@@ -17,11 +18,17 @@ import java.util.stream.Stream
 class AccountServiceImpl(@Autowired private val passwordEncoder: PasswordEncoder,
                          @Autowired private val accountRepository: AccountRepository) : AccountService {
 
-    override fun saveUser(userDto: UserDto): User {
+    override fun saveUser(inboundUserDto: InboundUserDto): User {
 
-        val user = Employee(
-            userDto.username,
-            passwordEncoder.encode(userDto.password))
+        val factory = { username: String, encodedPassword: String ->
+            if (inboundUserDto.role == "Admin")
+                Admin(username, encodedPassword)
+            Employee(username, encodedPassword)
+        }
+
+        val user = factory(
+            inboundUserDto.username,
+            passwordEncoder.encode(inboundUserDto.password))
 
         return accountRepository.save(user)
     }

@@ -11,7 +11,7 @@ import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.RestController
-import server.circlehelp.api.response.CompartmentLocation
+import server.circlehelp.api.response.CompartmentPosition
 import server.circlehelp.api.response.ProductDetails
 import server.circlehelp.api.response.ProductID
 import server.circlehelp.api.response.ProductOnCompartmentDto
@@ -71,6 +71,7 @@ class ShelvesController(
 
         return ResponseEntity.ok(mapperBuilder.build<ObjectMapper>().writeValueAsString(productDetails))
     }
+
 
     @GetMapping("/get")
     fun getStocks(@RequestParam(value = "row") rowNumber: Int) : ResponseEntity<String> {
@@ -144,7 +145,7 @@ class ShelvesController(
             .body(mapperBuilder.build<ObjectMapper>().writeValueAsString(compartment.getLocation()))
     }
 
-    private fun moveToShelf(id: Long, location: CompartmentLocation) : ResponseEntity<String> {
+    private fun moveToShelf(id: Long, location: CompartmentPosition) : ResponseEntity<String> {
 
         val compartment = compartmentRepository
             .findAll()
@@ -159,7 +160,7 @@ class ShelvesController(
         return moveToShelf(inventoryStock, compartment)
     }
 
-    private fun changeStockPlacement(oldLocation: CompartmentLocation, newLocation: CompartmentLocation) : ResponseEntity<String> {
+    private fun changeStockPlacement(oldLocation: CompartmentPosition, newLocation: CompartmentPosition) : ResponseEntity<String> {
 
         val productOnCompartment = productOnCompartmentRepository
             .findAll()
@@ -178,7 +179,7 @@ class ShelvesController(
         return ResponseEntity.ok("Changed product location from ${oldLocation.toString()} to ${newLocation.toString()}")
     }
 
-    private fun moveToInventory(oldLocation: CompartmentLocation) : ResponseEntity<String> {
+    private fun moveToInventory(oldLocation: CompartmentPosition) : ResponseEntity<String> {
         val compartment = compartmentRepository
             .findAll()
             .first { i -> i.getLocation() == oldLocation }

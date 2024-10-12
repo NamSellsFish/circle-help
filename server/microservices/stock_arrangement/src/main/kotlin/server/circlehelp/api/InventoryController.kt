@@ -7,9 +7,13 @@ import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.ResponseBody
 import org.springframework.web.bind.annotation.RestController
+import server.circlehelp.api.response.InventoryStockItem
 import server.circlehelp.entities.InventoryStock
 import server.circlehelp.repositories.InventoryRepository
 import java.util.Collections
+import java.util.stream.Collectors.groupingBy
+import java.util.stream.Collectors.summingDouble
+import java.util.stream.Collectors.summingInt
 
 @Controller
 //@RequestMapping("/")
@@ -23,8 +27,8 @@ class InventoryController(@Autowired private val inventoryRepository: InventoryR
                      @RequestParam(defaultValue = "0") minPrice: Double,
                      @RequestParam(defaultValue = "32767") maxPrice: Double,
                      @RequestParam(defaultValue = "") sortColumn: String,
-                     @RequestParam(defaultValue = "False") ascending: Boolean): List<InventoryStock> {
-        var result = inventoryRepository
+                     @RequestParam(defaultValue = "False") ascending: Boolean): MutableCollection<InventoryStockItem> {
+        val result = inventoryRepository
             .findAll()
             .filter {
                     i ->
@@ -34,9 +38,20 @@ class InventoryController(@Autowired private val inventoryRepository: InventoryR
                         ||
                         (i.product.price in minPrice..maxPrice)
             }
+            .stream()
+            .collect(groupingBy {i -> i.product.id})
+            .mapValuesTo(HashMap()) { i ->
+                val items = i.value
+                val item = items[0].product
+                InventoryStockItem(
+                    item.id!!,
+                    item.name,
+                    items.stream().collect(summingInt { i -> i.inventoryQuantity }),
+                    item.price
+                )
+            }
 
-
-        return result
+        return result.values
     }
 
 }

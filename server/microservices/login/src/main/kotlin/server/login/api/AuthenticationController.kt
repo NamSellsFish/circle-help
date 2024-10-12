@@ -12,30 +12,33 @@ import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.ResponseBody
 import org.springframework.web.bind.annotation.ResponseStatus
-import server.login.api.response.UserDto
+import server.login.api.response.InboundUserDto
 import server.login.entities.User
 import server.login.services.AccountService
+import server.server.login.api.response.OutboundUserDto
 
 @Controller
 @RequestMapping("/api/auth")
 class AuthenticationController(@Autowired private val authenticationManager: AuthenticationManager,
                                @Autowired private val accountService: AccountService) {
 
-    data class UserResponse(val user: UserDto)
+    data class InboundUserResponse(val user: InboundUserDto)
+    data class OutboundUserResponse(val user: OutboundUserDto)
 
     @PostMapping("/register")
     @ResponseStatus(HttpStatus.CREATED)
     @ResponseBody
-    fun registerUser(@RequestBody userResponse: UserResponse): User {
+    fun registerUser(@RequestBody inboundUserResponse: InboundUserResponse): OutboundUserResponse {
 
-        return accountService.saveUser(userResponse.user)
+        val user = accountService.saveUser(inboundUserResponse.user)
+        return OutboundUserResponse(OutboundUserDto(user.username, user.encodedPassword, user.javaClass.simpleName))
     }
 
     @PostMapping("/login", consumes = [ MediaType.ALL_VALUE ])
-    fun loginUser(@RequestBody userResponse: UserResponse): ResponseEntity<UserResponse> {
+    fun loginUser(@RequestBody inboundUserResponse: InboundUserResponse): ResponseEntity<OutboundUserResponse> {
 
-        val username = userResponse.user.username
-        val password = userResponse.user.password
+        val username = inboundUserResponse.user.username
+        val password = inboundUserResponse.user.password
 
         val authenticationRequest =
             UsernamePasswordAuthenticationToken.unauthenticated(
@@ -46,6 +49,6 @@ class AuthenticationController(@Autowired private val authenticationManager: Aut
 
         val user = accountService.getUser(username)
 
-        return ResponseEntity(UserResponse(UserDto(user.username, user.encodedPassword)), HttpStatus.ACCEPTED)
+        return ResponseEntity(OutboundUserResponse(OutboundUserDto(user.username, user.encodedPassword, user.javaClass.simpleName)), HttpStatus.ACCEPTED)
     }
 }

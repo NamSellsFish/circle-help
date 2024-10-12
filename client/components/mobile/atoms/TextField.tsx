@@ -1,5 +1,5 @@
 import React from 'react'
-import { Control, FieldError, FieldValues, useController } from 'react-hook-form'
+import { Control, FieldError, useController } from 'react-hook-form'
 import { Text, TextInput, TextInputProps, View } from 'react-native'
 import DisplayError from './DisplayError'
 

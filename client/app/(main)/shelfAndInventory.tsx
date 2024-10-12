@@ -1,8 +1,12 @@
+import { FontAwesome } from "@expo/vector-icons";
 import { Stack } from "expo-router";
 import React from "react";
-import { Image, Pressable, ScrollView, Text, View } from 'react-native'
+import { Pressable, ScrollView, Text, View } from 'react-native'
+import Tooltip from 'react-native-walkthrough-tooltip';
+import { CompartmentModal } from "~/components";
 
-const DATA = [
+// Mock data
+const MOCK_RESPONSE_BODY = [
     { id: 1, product: 'product 1', price: 100, expireDate: '2022-12-12' },
     { id: 2, product: 'product 2', price: 101, expireDate: '2022-12-13' },
     { id: 3, product: 'product 3', price: 102, expireDate: '2022-12-14' },
@@ -102,39 +106,81 @@ const DATA = [
     { id: 97, product: 'product 97', price: 196, expireDate: '2023-03-18' },
     { id: 98, product: 'product 98', price: 197, expireDate: '2023-03-19' },
     { id: 99, product: 'product 99', price: 198, expireDate: '2023-03-20' },
-    // { id: 100, product: 'product 100', price: 199, expireDate: '2023-03-21' },
+    { id: 100, product: 'product 100', price: 100, expireDate: '2023-03-21' },
 ];
+const MOCK_MODAL_STATE = 101;
+const MOCK_TOOLTIP_STATE = 101;
 
 
-function ProductOnCompartMentScreen() {
+function ShelfAndInventoryScreen() {
+
     return (
         <>
-            <ScrollView className="container shrink-0 mx-auto px-5 py-2 lg:px-32 lg:pt-12">
-                <View className="-m-1 h-[200%] flex flex-row flex-wrap md:-m-2">
+            <Stack.Screen
+                options={{
+                    headerShown: false,
+                }}
+            />
+            {/* Shelf-level Tab list */}
+            <ScrollView className="container order-first flex-grow-0 h-10 bg-red-300 mx-auto px-5 py-2 lg:px-32 lg:pt-12" />
+
+            {/* Compartment Gallery */}
+            <ScrollView className="container shrink-0 mx-auto px-5 py-2 lg:px-32 lg:pt-12 ">
+                <View className="pl-3 pt-1 h-[200%] flex flex-row flex-wrap border-dashed border-2 border-black">
                     {
-                        DATA.map((item) => (
-                            <Pressable onPress={() => alert(item.id)} key={item.id} className="flex w-[8%] h-[9%] bg-blue-300 flex-wrap ml-1">
-                                <View className=" w-full h-full p-1 md:p-2">
-                                    <Text className="flex items-center text-center h-full w-full rounded-lg -mb-2">
-                                        {item.id}
-                                    </Text>
-                                </View>
-                            </Pressable>
-                        ))
+                        Array.from({ length: 100 }, (_, i) => i).map((item, i) => {
+                            if ([3, 4, 5, 6, 7, 13, 17, 23, 27, 33, 34, 35, 36, 37, 38, 39, 43, 44, 45, 46, 47, 48, 49, 53, 54, 55, 56, 57, 58, 59, 63, 67, 73, 77, 83, 87, 93, 94, 95, 96, 97].includes(i)) return (<Pressable disabled={true} onPress={() => { }} key={i} className={`flex w-[8%] h-[8%] ml-1 mb-1 rounded-lg`} />)
+                            else return (                                                                                                                   // TODO: Cần quản lý bằng state
+                                <Pressable onPress={() => { }} key={i} className={`flex w-[8%] h-[8%] border-solid border-4 border-black ml-1 mb-1 rounded-lg ${item === 41 ? 'bg-gray-400' : 'bg-[url(https://st2.depositphotos.com/2009363/8591/v/950/depositphotos_85916628-stock-illustration-the-gray-and-white-squares.jpg)] bg-cover'}`}>
+                                    <View className="block z-[0] w-full h-full p-1 md:p-2">
+                                        <Text data-twe-toggle="tooltip" className="flex items-center text-[8px] h-full w-full absolute left-[2px]">
+                                            {i}
+                                        </Text>
+                                        <CompartmentModal isShow={MOCK_MODAL_STATE === item} onClose={() => { }} data={{}} />
+                                        {
+                                            // TODO: Cần quản lý bằng state
+                                            [5, 12, 23, 41, 37, 86, 75, 59, 30, 92, 33].includes(item)
+                                            &&
+                                            <Tooltip
+                                                arrowSize={{ width: 16, height: 8 }}
+                                                isVisible={MOCK_TOOLTIP_STATE === item}
+                                                disableShadow
+                                                content={
+
+                                                    <>
+                                                        {/* <Text className="text-lg font-bold">📌 Tips:</Text> */}
+                                                        <Text>📅 1 day before the date → Needs to be taken down </Text>
+                                                        <Text>🔖 Event time (e.g., The Red Festival) → Needs to be gathered into event shelf </Text>
+                                                        <Text>💲1 week before the date → Needs to be displayed in the front compartments with a discount or 'buy 2 get 1 free' promo </Text>
+                                                    </>
+
+
+                                                }
+                                                onClose={() => { }}
+                                                placement="bottom"
+
+                                            >
+
+                                                <FontAwesome onPress={() => { }} name="warning" size={12} className="z-[10] text-yellow-400 absolute -top-1 -right-1" />
+                                            </Tooltip>
+                                        }
+                                    </View>
+                                </Pressable>
+
+                            )
+                        })
                     }
 
 
                 </View>
 
-            </ScrollView>
-            <ScrollView className="container order-first flex-grow-0 h-10 bg-red-300 mx-auto px-5 py-2 lg:px-32 lg:pt-12">
+            </ScrollView >
 
-            </ScrollView>
-            <ScrollView className="container order-last flex-grow-0 h-0 bg-green-300">
+            {/* Inventory */}
+            <ScrollView className="container order-last flex-grow-0 h-0 bg-green-300" />
 
-            </ScrollView>
         </>
     );
 }
 
-export default ProductOnCompartMentScreen;
+export default ShelfAndInventoryScreen;

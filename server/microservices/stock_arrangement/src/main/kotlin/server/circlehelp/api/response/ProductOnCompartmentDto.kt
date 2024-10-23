@@ -1,6 +1,12 @@
 package server.circlehelp.api.response
 
+import com.fasterxml.jackson.annotation.JsonProperty
+
 data class ProductOnCompartmentDto(
     val position: CompartmentPosition,
-    val productDetails: ProductDetails
-)
+    val statusCode: Int,
+    val productDetails: ProductDetails?
+) {
+    constructor(position: CompartmentPosition, productDetails: ProductDetails?)
+            : this(position, 0, productDetails)
+}

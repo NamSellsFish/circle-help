@@ -7,5 +7,5 @@ data class ProductDetails(
     val name: String,
     val price: Double,
     var wholesalePrice: Double,
-    var expirationDate: LocalDate
+    var expirationDate: LocalDate?
 )

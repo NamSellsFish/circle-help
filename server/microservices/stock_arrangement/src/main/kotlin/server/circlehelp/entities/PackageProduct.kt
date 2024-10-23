@@ -16,7 +16,7 @@ class PackageProduct(
     @ManyToOne var product: Product,
     var importedQuantity: Int,
     var wholesalePrice: Double,
-    var expirationDate: LocalDate,
+    var expirationDate: LocalDate?,
     @Id @GeneratedValue var id: Long? = null
 ) {
 

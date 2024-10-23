@@ -2,6 +2,7 @@ package server.circlehelp.repositories
 
 import org.springframework.data.jpa.repository.JpaRepository
 import org.springframework.data.jpa.repository.Query
+import org.springframework.data.jpa.repository.config.EnableJpaRepositories
 import org.springframework.stereotype.Repository
 import server.circlehelp.entities.Compartment
 import server.circlehelp.entities.ProductOnCompartment
@@ -11,4 +12,18 @@ interface ProductOnCompartmentRepository : JpaRepository<ProductOnCompartment, L
 
 
     fun findByCompartment(compartment: Compartment) : ProductOnCompartment?
+
+    /*
+    fun overwrite(productOnCompartment: ProductOnCompartment) : ProductOnCompartment {
+
+        val previousCompartment = findByCompartment(productOnCompartment.compartment)
+            ?: return save(productOnCompartment)
+
+        previousCompartment.status = productOnCompartment.status
+        previousCompartment.packageProduct = productOnCompartment.packageProduct
+
+        return save(previousCompartment)
+    }
+
+     */
 }

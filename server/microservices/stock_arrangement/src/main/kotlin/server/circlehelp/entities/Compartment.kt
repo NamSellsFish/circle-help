@@ -14,7 +14,7 @@ import server.circlehelp.api.response.CompartmentPosition
 class Compartment(
     @ManyToOne var layer: Layer,
     var number: Int,
-    @Id @GeneratedValue @NotNull var id: Long? = null
+    @Id @GeneratedValue var id: Long? = null
 ) {
 
 

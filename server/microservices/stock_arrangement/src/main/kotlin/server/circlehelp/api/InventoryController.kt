@@ -1,23 +1,21 @@
 package server.circlehelp.api
 
 import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.data.domain.Sort
 import org.springframework.stereotype.Controller
 import org.springframework.web.bind.annotation.GetMapping
-import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.ResponseBody
-import org.springframework.web.bind.annotation.RestController
 import server.circlehelp.api.response.InventoryStockItem
-import server.circlehelp.entities.InventoryStock
 import server.circlehelp.repositories.InventoryRepository
-import java.util.Collections
+import server.circlehelp.utilities.Logic
 import java.util.stream.Collectors.groupingBy
-import java.util.stream.Collectors.summingDouble
 import java.util.stream.Collectors.summingInt
 
 @Controller
 //@RequestMapping("/")
-class InventoryController(@Autowired private val inventoryRepository: InventoryRepository) {
+class InventoryController(@Autowired private val inventoryRepository: InventoryRepository,
+                          private val logic: Logic) {
 
     @GetMapping("/api/inventory")
     @ResponseBody
@@ -28,25 +26,33 @@ class InventoryController(@Autowired private val inventoryRepository: InventoryR
                      @RequestParam(defaultValue = "32767") maxPrice: Double,
                      @RequestParam(defaultValue = "") sortColumn: String,
                      @RequestParam(defaultValue = "False") ascending: Boolean): MutableCollection<InventoryStockItem> {
+        var sorter = Sort.by(sortColumn)
+
+        if (!ascending) sorter.descending().also { sorter = it }
+
         val result = inventoryRepository
-            .findAll()
-            .filter {
-                    i ->
-                        (searchTerm.isEmpty() || i.product.name.contains(searchTerm))
-                        ||
-                        (i.inventoryQuantity in minQuantity..maxQuantity)
-                        ||
-                        (i.product.price in minPrice..maxPrice)
-            }
+            .findAll(sorter)
             .stream()
-            .collect(groupingBy {i -> i.product.id})
-            .mapValuesTo(HashMap()) { i ->
-                val items = i.value
-                val item = items[0].product
+            .filter {
+                (searchTerm.isEmpty() || it.packageProduct.product.name.contains(searchTerm, true))
+                        &&
+                        (it.inventoryQuantity in minQuantity..maxQuantity)
+                        &&
+                        (it.packageProduct.product.price in minPrice..maxPrice)
+            }
+            .collect(groupingBy {it.packageProduct.product.id})
+            .mapValuesTo(HashMap()) {
+                val items = it.value
+                val item = items[0].packageProduct.product
                 InventoryStockItem(
                     item.id!!,
                     item.name,
-                    items.stream().collect(summingInt { i -> i.inventoryQuantity }),
+                    items.stream().collect(summingInt {
+                        if (logic.isExpiring(it.packageProduct))
+                            0
+                        else
+                            it.inventoryQuantity
+                    }),
                     item.price
                 )
             }

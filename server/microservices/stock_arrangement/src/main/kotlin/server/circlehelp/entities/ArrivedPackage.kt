@@ -9,7 +9,7 @@ import java.time.LocalDateTime
 
 @Entity
 class ArrivedPackage(
-    var date: LocalDateTime,
+    @Column(columnDefinition = "TIMESTAMP") var date: LocalDateTime,
     var supplier: String,
     @Id @GeneratedValue var id: Long? = null
 )

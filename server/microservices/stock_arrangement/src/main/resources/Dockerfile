@@ -1,5 +1,5 @@
 # Use an OpenJDK base image
-FROM sapmachine/jdk:21
+FROM openjdk:21-ea
 
 # Set working directory
 WORKDIR /app

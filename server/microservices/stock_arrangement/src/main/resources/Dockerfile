@@ -8,7 +8,7 @@ RUN apt-get update && apt-get install -y wget openjdk-21-jre
 WORKDIR /app
 
 # Download the JAR file from Google Drive
-RUN wget -O app.jar "https://drive.google.com/file/d/1tJgthPviI0f1fO_X0gTtK21MPoQ1nYew/view?usp=sharing"
+RUN wget -O app.jar "https://drive.google.com/uc?export=download&id=1tJgthPviI0f1fO_X0gTtK21MPoQ1nYew"
 
 # Run the JAR file
 CMD ["java", "-jar", "app.jar"]

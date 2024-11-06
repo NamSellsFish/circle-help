@@ -2,10 +2,13 @@ package server.login.entities
 
 import jakarta.persistence.DiscriminatorValue
 import jakarta.persistence.Entity
+import server.login.value_classes.EncodedPassword
 
 @Entity
-@DiscriminatorValue("Admin")
+@DiscriminatorValue(Roles.Admin)
 class Admin(username: String,
-               encodedPassword: String) : User(username, encodedPassword) {
+               encodedPassword: EncodedPassword) : User(username, encodedPassword) {
+    override fun getRole() = Roles.Admin
+
 
 }

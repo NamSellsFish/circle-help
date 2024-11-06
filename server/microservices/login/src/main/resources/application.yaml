@@ -1,0 +1,56 @@
+spring:
+  application:
+    name: CircleHelpLoginMicroservice
+
+  datasource:
+    url: jdbc:mysql://host21110776.ddns.net:8000/circle_help_db
+    username: remote_root
+    password: admin
+    driverClassName: com.mysql.cj.jdbc.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+
+  session:
+    jdbc:
+      initialize-schema: always
+
+  security:
+    user:
+      name: spring.datasource.username
+      password: spring.datasource.password
+    oauth2:
+      authorizationserver:
+        client:
+          oidc-client:
+            registration:
+              client-id: "oidc-client"
+              client-secret: "{noop}secret"
+              client-authentication-methods:
+                - "client_secret_basic"
+              authorization-grant-types:
+                - "authorization_code"
+                - "refresh_token"
+              redirect-uris:
+                - "http://127.0.0.1:8080/login/oauth2/code/oidc-client"
+              post-logout-redirect-uris:
+                - "http://127.0.0.1:8080/"
+              scopes:
+                - "openid"
+                - "profile"
+            require-authorization-consent: true
+
+server:
+  port: 8002
+
+logging:
+  level:
+    org.springframework.security: trace
+
+jakarta:
+  persistence:
+    jdbc:
+      url: spring.datasource.url
+      user: spring.datasource.username
+      pass: spring.datasource.password

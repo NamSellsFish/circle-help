@@ -1,54 +1,107 @@
 package server.login.api
 
-import org.springframework.beans.factory.annotation.Autowired
+import jakarta.servlet.http.HttpServletRequest
+import jakarta.servlet.http.HttpServletResponse
+import org.springframework.http.HttpHeaders
 import org.springframework.http.HttpStatus
 import org.springframework.http.MediaType
 import org.springframework.http.ResponseEntity
 import org.springframework.security.authentication.AuthenticationManager
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken
+import org.springframework.security.core.annotation.CurrentSecurityContext
+import org.springframework.security.core.context.SecurityContext
+import org.springframework.security.core.context.SecurityContextHolder
+import org.springframework.security.web.context.DelegatingSecurityContextRepository
+import org.springframework.security.web.context.SecurityContextRepository
 import org.springframework.stereotype.Controller
+import org.springframework.web.bind.annotation.PatchMapping
 import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestBody
+import org.springframework.web.bind.annotation.RequestHeader
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.ResponseBody
 import org.springframework.web.bind.annotation.ResponseStatus
-import server.login.api.response.InboundUserDto
-import server.login.entities.User
+import org.springframework.web.bind.annotation.RestController
+import server.login.api.URIs.baseURI
+import server.login.api.request.LoginDto
+import server.login.api.response.InboundUserRequest
 import server.login.services.AccountService
-import server.server.login.api.response.OutboundUserDto
+import server.login.api.request.RegistrationDto
+import server.login.api.response.OutboundUserDto
+import server.login.repositories.readonly.ReadonlyAccountRepository
+import server.login.value_classes.FuncChain
+import server.login.value_classes.Password
+import java.util.Base64
+import kotlin.jvm.optionals.getOrNull
 
 @Controller
-@RequestMapping("/api/auth")
-class AuthenticationController(@Autowired private val authenticationManager: AuthenticationManager,
-                               @Autowired private val accountService: AccountService) {
+@RequestMapping(baseURI)
+class AuthenticationController(private val authenticationManager: AuthenticationManager,
+                               private val accountService: AccountService,
+                               private val securityContextRepository: SecurityContextRepository,
+                               private val accountRepository: ReadonlyAccountRepository)
+{
 
-    data class InboundUserResponse(val user: InboundUserDto)
     data class OutboundUserResponse(val user: OutboundUserDto)
+    data class PasswordRequest(val password: Password)
 
     @PostMapping("/register")
     @ResponseStatus(HttpStatus.CREATED)
     @ResponseBody
-    fun registerUser(@RequestBody inboundUserResponse: InboundUserResponse): OutboundUserResponse {
+    fun registerUser(@RequestBody inboundUserRequest: InboundUserRequest<RegistrationDto>): OutboundUserResponse {
 
-        val user = accountService.saveUser(inboundUserResponse.user)
-        return OutboundUserResponse(OutboundUserDto(user.username, user.encodedPassword, user.javaClass.simpleName))
+        val user = accountService.registerUser(inboundUserRequest.user)
+        return OutboundUserResponse(
+            OutboundUserDto(
+                user.username,
+                user.encodedPassword,
+                user.getRole()))
     }
 
-    @PostMapping("/login", consumes = [ MediaType.ALL_VALUE ])
-    fun loginUser(@RequestBody inboundUserResponse: InboundUserResponse): ResponseEntity<OutboundUserResponse> {
+    @PatchMapping("/changePassword")
+    fun changePassword(@RequestBody changePasswordRequest: PasswordRequest,
+                       request: HttpServletRequest,
+                       response: HttpServletResponse,
+                       @CurrentSecurityContext securityContext: SecurityContext) : ResponseEntity<String> {
 
-        val username = inboundUserResponse.user.username
-        val password = inboundUserResponse.user.password
+        val username = securityContext.authentication.name
+        val user = accountRepository.findById(username).getOrNull()
+            ?: return ResponseEntity
+                .unprocessableEntity()
+                .body("User '$username' not found.")
 
-        val authenticationRequest =
-            UsernamePasswordAuthenticationToken.unauthenticated(
-                username, password)
+        accountService.changePassword(user, changePasswordRequest.password)
 
-        val authenticationResponse =
-            authenticationManager.authenticate(authenticationRequest)
+        return ResponseEntity
+            .ok()
+            .body("$username changed password.")
+    }
 
-        val user = accountService.getUser(username)
+    @PostMapping("/login")
+    fun login(@RequestHeader(HttpHeaders.AUTHORIZATION) authInfo: String,
+              request: HttpServletRequest,
+              response: HttpServletResponse,
+              @CurrentSecurityContext securityContext: SecurityContext) : ResponseEntity<String> {
 
-        return ResponseEntity(OutboundUserResponse(OutboundUserDto(user.username, user.encodedPassword, user.javaClass.simpleName)), HttpStatus.ACCEPTED)
+        securityContextRepository.saveContext(securityContext, request, response)
+
+        return FuncChain(this::decodeBasicAuth)
+            .append {
+                ResponseEntity.ok()
+                .body(it)
+            }
+            .invoke(authInfo)
+    }
+
+    private fun decodeBasicAuth(authInfo: String): String {
+        val encodedStr = authInfo.substring("Basic ".length)
+        val usernameAndPasswordString = String(Base64.getDecoder().decode(encodedStr))
+
+        val colonIndex = usernameAndPasswordString.indexOf(':')
+
+        val username = usernameAndPasswordString.substring(0..<colonIndex)
+        val password = usernameAndPasswordString.substring(colonIndex + 1)
+
+        return """Logged in as: $username"""
     }
 }

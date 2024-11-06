@@ -1,0 +1,33 @@
+spring:
+  application:
+    name: CircleHelpStockArrangementMicroservice
+
+  datasource:
+    url: jdbc:mysql://host21110776.ddns.net:8000/circle_help_db
+    username: remote_root
+    password: admin
+    driverClassName: com.mysql.cj.jdbc.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+
+  session:
+    jdbc:
+      initialize-schema: always
+
+
+
+server:
+  port: 8001
+
+logging:
+  level:
+    org.springframework.security: trace
+
+jakarta:
+  persistence:
+    jdbc:
+      url: spring.datasource.url
+      user: spring.datasource.username
+      pass: spring.datasource.password

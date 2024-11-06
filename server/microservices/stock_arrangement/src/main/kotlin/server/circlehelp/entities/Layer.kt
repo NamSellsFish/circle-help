@@ -7,13 +7,18 @@ import jakarta.persistence.Column
 import jakarta.persistence.ManyToOne
 import jakarta.persistence.Table
 import jakarta.persistence.UniqueConstraint
+import jakarta.validation.constraints.Min
+import jakarta.validation.constraints.NotNull
 
 @Entity
-@Table(uniqueConstraints = [UniqueConstraint(columnNames = ["shelf", "number"])])
+@Table(uniqueConstraints = [UniqueConstraint(columnNames = ["shelf_id", "number"])])
 class Layer(
     @ManyToOne var shelf: Shelf,
-    @Column var number: Int,
-    var compartmentCount: Int = 5,
+
+    @NotNull @Min(1)
+    @Column(nullable = false)
+    var number: Int,
+
     @Id @GeneratedValue var id: Long? = null
 ) {
 }

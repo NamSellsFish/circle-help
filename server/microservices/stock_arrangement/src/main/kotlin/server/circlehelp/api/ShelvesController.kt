@@ -1,7 +1,8 @@
 package server.circlehelp.api
 
+import com.fasterxml.jackson.databind.DatabindException
 import com.fasterxml.jackson.databind.ObjectMapper
-import org.springframework.beans.factory.annotation.Autowired
+import com.fasterxml.jackson.module.kotlin.readValue
 import org.springframework.http.ResponseEntity
 import org.springframework.http.converter.json.Jackson2ObjectMapperBuilder
 import org.springframework.web.bind.annotation.GetMapping
@@ -11,18 +12,18 @@ import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.RestController
+import server.circlehelp.api.response.CompartmentInfo
 import server.circlehelp.api.response.CompartmentPosition
 import server.circlehelp.api.response.ErrorResponse
-import server.circlehelp.api.response.ManualMoveRequest
+import server.circlehelp.api.response.ManualMovesRequest
+import server.circlehelp.api.response.MoveProductToShelfRequest
 import server.circlehelp.api.response.ProductDetails
 import server.circlehelp.api.response.ProductID
 import server.circlehelp.api.response.ProductList
 import server.circlehelp.api.response.ProductOnCompartmentDto
 import server.circlehelp.api.response.SwapRequest
 import server.circlehelp.entities.Compartment
-import server.circlehelp.entities.InventoryStock
 import server.circlehelp.entities.Product
-import server.circlehelp.entities.ProductOnCompartment
 import server.circlehelp.repositories.CompartmentRepository
 import server.circlehelp.repositories.EventCompartmentRepository
 import server.circlehelp.repositories.FrontCompartmentRepository
@@ -32,27 +33,29 @@ import server.circlehelp.repositories.ProductOnCompartmentRepository
 import server.circlehelp.repositories.ProductRepository
 import server.circlehelp.repositories.RowRepository
 import server.circlehelp.repositories.ShelvesRepository
-import server.circlehelp.utilities.ResponseBodyWriter
-import server.circlehelp.utilities.Logic
+import server.circlehelp.services.ResponseBodyWriter
+import server.circlehelp.services.Logic
+import server.circlehelp.services.ShelfService
 import java.util.LinkedList
-import java.util.stream.Stream
 import kotlin.jvm.optionals.getOrNull
 
 @RestController
 @RequestMapping("/api/shelves")
 class ShelvesController(
     private val productRepository: ProductRepository,
-    @Autowired private val productOnCompartmentRepository: ProductOnCompartmentRepository,
-    @Autowired private val inventoryRepository: InventoryRepository,
-    @Autowired private val shelvesRepository: ShelvesRepository,
-    @Autowired private val rowRepository: RowRepository,
-    @Autowired private val compartmentRepository: CompartmentRepository,
-    @Autowired private val packageProductRepository: PackageProductRepository,
+    private val productOnCompartmentRepository: ProductOnCompartmentRepository,
+    private val inventoryRepository: InventoryRepository,
+    private val shelvesRepository: ShelvesRepository,
+    private val rowRepository: RowRepository,
+    private val compartmentRepository: CompartmentRepository,
+    private val packageProductRepository: PackageProductRepository,
     private val frontCompartmentRepository: FrontCompartmentRepository,
     private val eventCompartmentRepository: EventCompartmentRepository,
-    @Autowired private val mapperBuilder: Jackson2ObjectMapperBuilder,
-    @Autowired private val responseBodyWriter: ResponseBodyWriter,
-    @Autowired private val logic: Logic
+
+    mapperBuilder: Jackson2ObjectMapperBuilder,
+    private val responseBodyWriter: ResponseBodyWriter,
+    private val logic: Logic,
+    private val shelfService: ShelfService,
 ) {
     private val objectMapper: ObjectMapper = mapperBuilder.build()
 
@@ -75,7 +78,7 @@ class ShelvesController(
 
         val product = packageProduct.product
         val productDetails = ProductDetails(
-            product.id!!,
+            product.sku,
             product.name,
             product.price,
             packageProduct.wholesalePrice,
@@ -100,10 +103,17 @@ class ShelvesController(
 
                 val order = it.packageProduct
 
+                val location = it.compartment.getLocation()
+
                 ProductOnCompartmentDto(
-                    it.compartment.getLocation(),
+                    CompartmentInfo(
+                        location.shelfNo,
+                        location.rowNo,
+                        location.compartmentNo,
+                        it.compartment.compartmentNoFromUserPerspective
+                    ),
                     ProductDetails(
-                        order.product.id!!,
+                        order.product.sku,
                         order.product.name,
                         order.product.price,
                         order.wholesalePrice,
@@ -130,7 +140,7 @@ class ShelvesController(
 
                 val productDetails : ProductDetails? = if (order != null) {
                     ProductDetails(
-                        order.product.id!!,
+                        order.product.sku,
                         order.product.name,
                         order.product.price,
                         order.wholesalePrice,
@@ -138,8 +148,15 @@ class ShelvesController(
                     )
                 } else null
 
+                val location = it.getLocation()
+
                 ProductOnCompartmentDto(
-                    it.getLocation(),
+                    CompartmentInfo(
+                        location.shelfNo,
+                        location.rowNo,
+                        location.compartmentNo,
+                        it.compartmentNoFromUserPerspective
+                    ),
                     productDetails
                 )
             }
@@ -147,45 +164,148 @@ class ShelvesController(
         return ResponseEntity.ok(objectMapper.writeValueAsString(collection))
     }
 
-    @PostMapping("/automove")
+    @PostMapping("/automove_")
     fun autoMove(@RequestBody productID: ProductID) : ResponseEntity<String> {
         val compartment = compartmentRepository
             .findAll()
-            .firstOrNull { productOnCompartmentRepository.existsById(it.id!!) }
+            .firstOrNull { productOnCompartmentRepository.findByCompartment(it) == null }
             ?: return ResponseEntity.ok("No empty compartments found.")
 
         val inventoryStock = inventoryRepository
             .findAllByOrderByPackageProductExpirationDateDesc()
-            .firstOrNull { it.packageProduct.product.id == productID.id }
+            .firstOrNull { it.packageProduct.product.sku == productID.sku }
             ?: return responseBodyWriter.toResponseEntity(
-                logic.productNotFoundResponse(productID.id))
+                logic.notInInventoryResponse(productID.sku))
 
-        val result = moveToShelf(inventoryStock, compartment)
+        val result = shelfService.moveToShelf(inventoryStock, compartment)
 
         if (result.first != null)
             return ResponseEntity.ok(result.first)
         return responseBodyWriter.toResponseEntity(result.second!!)
     }
 
-    //TODO: Error aggregation
-    @PutMapping("/manualMove")
-    fun move(@RequestBody body: ManualMoveRequest) : ResponseEntity<String> {
+    /**
+     * Inputs:
+     * - List of IDs of products to be arranged to the shelves from the inventory.
+     * - List of IDs of products to be checked for slow-selling.
+     *  If empty, all products on shelves will be checked.
+     * - moveSlowSell: Whether to check for slow-selling.
+     * - removeExpiring: Whether to remove expiring stocks
+     *
+     * Requirements:
+     * - Products must be in their correct categories if no other requirements.
+     * - Empty compartments left behind are to be filled by those products.
+     * - Stocks of the same product are expected to be placed next to each other,
+     *  preferably at the same compartment position across all layers.
+     *
+     * Implementation:
+     * - Remove expiring stocks while store their previous locations
+     * - Move slow-selling stocks to front compartments while store their previous locations
+     * - Create Iterator iterating Shelves > Compartments > Layers
+     * - If moveSlowSell || removeExpiring {
+     * - Partition previous locations to items to be arranged
+     * - } Else
+     * - Move Items to correct empty compartments of that category
+     */
+    @PostMapping("/automove")
+    fun autoMove() {
+        objectMapper.readTree()
+    }
+
+    @PostMapping("/manualMove")
+    fun move(@RequestBody body: ManualMovesRequest) : ResponseEntity<String> {
+
+        val srcIterator = body.src.iterator()
+        val desIterator = body.des.iterator()
+
+        val errors = ErrorResponse()
+
+        while (srcIterator.hasNext() && desIterator.hasNext()) {
+
+            val src = srcIterator.next()
+            val des = desIterator.next()
+
+            if (src.length == 6 && des != null) {
+
+                val desPos: CompartmentPosition
+
+                try {
+                    desPos = objectMapper.readValue<CompartmentPosition>(des)
+                } catch (ex: DatabindException) {
+                    errors.add(ErrorResponse(ex.localizedMessage))
+                    continue
+                }
+
+                val result = moveToShelf(src, desPos)
+
+                if (result.first == null) {
+                    errors.add(result.second!!)
+                }
+            }
+            else
+            if (des == null) {
+
+                val srcPos: CompartmentPosition
+
+                try {
+                    srcPos = objectMapper.readValue<CompartmentPosition>(src)
+                } catch (ex: DatabindException) {
+                    errors.add(ErrorResponse(ex.localizedMessage))
+                    continue
+                }
+
+                val result = shelfService.moveToInventory(srcPos)
+
+                if (result.first == null) {
+                    errors.add(result.second!!)
+                }
+            }
+        }
+
+        if (srcIterator.hasNext()) {
+            errors.add(ErrorResponse("Source List has more items than Destination List"))
+        }
+
+        if (desIterator.hasNext()) {
+            errors.add(ErrorResponse("Destination List has more items than Source List"))
+        }
+
+        if (! errors.errors.body.any()) {
+            return ResponseEntity.ok("")
+        } else {
+            return responseBodyWriter.toResponseEntity(errors)
+        }
+    }
+
+
+    @PutMapping("/manualMove_")
+    fun moveToShelf(@RequestBody body: MoveProductToShelfRequest) : ResponseEntity<String> {
+
+        val result = moveToShelf(body.src, body.des)
+
+        val message = result.first
+            ?: return responseBodyWriter.toResponseEntity(result.second!!)
+
+        return ResponseEntity.ok(message)
+    }
+
+    private fun moveToShelf(sku: String, compartmentPosition: CompartmentPosition) : Pair<String?, ErrorResponse?> {
         val inventoryStock =
             inventoryRepository
                 .findAllByOrderByPackageProductExpirationDateDesc()
-                .firstOrNull { it.packageProduct.product.id == body.src }
-                ?: return ResponseEntity.badRequest().body("No product with id: ${body.src}")
+                .firstOrNull { it.packageProduct.product.sku == sku }
+                ?: return logic.error(logic.productNotFoundResponse(sku))
 
-        val compartmentPosition = body.des
         val compartmentResult = logic.getCompartment(compartmentPosition)
         val compartment = compartmentResult.first
-            ?: return responseBodyWriter.toResponseEntity(compartmentResult.second!!)
+            ?: return logic.error(compartmentResult.second!!)
 
-        val result = moveToShelf(inventoryStock, compartment)
+        val result = shelfService.moveToShelf(inventoryStock, compartment)
         if (result.first != null)
-            return ResponseEntity.ok(result.first)
-        return responseBodyWriter.toResponseEntity(result.second!!)
+            return logic.item(result.first)
+        return logic.error(result.second!!)
     }
+
 
     @PostMapping("/swap")
     fun swap(@RequestBody body: Iterable<SwapRequest>) : ResponseEntity<String> {
@@ -194,10 +314,10 @@ class ShelvesController(
 
         for (request in body) {
 
-            errorResponse.add(changeStockPlacement(request.src, request.des))
+            errorResponse.add(shelfService.changeStockPlacement(request.src, request.des))
         }
 
-        if (errorResponse.errors.body.count() == 0) {
+        if (! errorResponse.errors.body.any()) {
             return ResponseEntity.ok("")
         }
 
@@ -211,7 +331,7 @@ class ShelvesController(
 
         for (request in body) {
 
-            errorResponse.add(moveToInventory(request).second)
+            errorResponse.add(shelfService.moveToInventory(request).second)
         }
 
         if (errorResponse.errors.body.count() == 0) {
@@ -238,9 +358,37 @@ class ShelvesController(
     fun removeExpired() {
         for (compartment in productOnCompartmentRepository.findAll()) {
             if (logic.isExpiring(compartment.packageProduct)) {
-                productOnCompartmentRepository.delete(compartment)
+                shelfService.moveToInventory(compartment.compartment)
             }
         }
+    }
+
+    @PutMapping("/removeAll")
+    fun removeAll() {
+        for (compartment in productOnCompartmentRepository.findAll()) {
+            shelfService.moveToInventory(compartment.compartment)
+        }
+    }
+
+    @GetMapping("/print")
+    fun printCompartments(@RequestParam(value = "row") rowNumber: Int) : ResponseEntity<String> {
+
+        val collection = MutableList<LinkedList<String?>>(shelvesRepository.count().toInt()) { LinkedList() }
+
+        val compartments = compartmentRepository
+            .findAll()
+            .filter { it.layer.number == rowNumber }
+
+        for (compartment in compartments) {
+            val productOnCompartment = productOnCompartmentRepository.findByCompartment(compartment)
+            collection[compartment.layer.shelf.number - 1].addLast(productOnCompartment?.packageProduct?.product?.sku)
+        }
+
+        val result = collection.map {
+            it.joinToString()
+        }
+
+        return ResponseEntity.ok(objectMapper.writeValueAsString(result))
     }
 
     private fun validateAndArrangeProductList(productList: ProductList, compartments: Iterable<Compartment>) : ResponseEntity<String> {
@@ -258,6 +406,41 @@ class ShelvesController(
     }
 
     private fun continuousArrangement(products: LinkedList<Product>, compartments: Iterable<Compartment>) {
+
+        //val productsToRearrange = HashMap<Product, int>()
+
+
+
+
+        var productIterator = products.iterator()
+        val compartmentIterator = compartments.iterator()
+
+        while (productIterator.hasNext() && compartmentIterator.hasNext()) {
+
+            val product = productIterator.next()
+
+            val inventoryStock =
+                inventoryRepository
+                    .findAllByOrderByPackageProductExpirationDateDesc()
+                    .firstOrNull { it.packageProduct.product == product
+                            && it.inventoryQuantity > 0 }
+
+            if (inventoryStock == null) {
+                productIterator.remove()
+                continue
+            }
+
+            val compartment = compartmentIterator.next()
+
+            shelfService.moveToShelf(inventoryStock, compartment)
+
+            if (!productIterator.hasNext()) {
+                productIterator = products.iterator()
+            }
+        }
+    }
+
+    private fun continuousArrangement1(products: LinkedList<Product>, compartments: Iterable<Compartment>) {
         var productIterator = products.iterator()
         val compartmentIterator = compartments.iterator()
 
@@ -278,7 +461,7 @@ class ShelvesController(
 
             val compartment = compartmentIterator.next()
 
-            moveToShelf(inventoryStock, compartment)
+            shelfService.moveToShelf(inventoryStock, compartment)
 
             if (!productIterator.hasNext()) {
                 productIterator = products.iterator()
@@ -286,110 +469,4 @@ class ShelvesController(
         }
     }
 
-    private fun moveToShelf(inventoryStock: InventoryStock, compartment: Compartment) : Pair<String?, ErrorResponse?> {
-
-        if (inventoryStock.inventoryQuantity == 0) return logic.item("No items left to move.")
-
-        if (logic.isExpiring(inventoryStock.packageProduct)) {
-            return logic.error(
-                logic.expiredProductArrangementAttemptResponse(inventoryStock.packageProduct))
-        }
-
-        inventoryStock.inventoryQuantity--
-
-        inventoryRepository.save(inventoryStock)
-
-        val productOnCompartment = productOnCompartmentRepository.findByCompartment(compartment)
-
-        if (productOnCompartment != null) {
-            moveToInventory(productOnCompartment.compartment.getLocation())
-        }
-
-        productOnCompartmentRepository.save(ProductOnCompartment(
-            compartment,
-            inventoryStock.packageProduct
-        ))
-
-        return logic.item(objectMapper.writeValueAsString(compartment.getLocation()))
-    }
-
-    /*
-    private fun moveToShelf(id: Long, location: CompartmentPosition) : ResponseEntity<String> {
-
-        val compartment = compartmentRepository
-            .findAll()
-            .firstOrNull { i -> i.getLocation() == location }
-            ?: return ResponseEntity.badRequest().body("No compartments found at location: $location")
-
-        val inventoryStock = inventoryRepository
-            .findAll()
-            .firstOrNull { i -> i.packageProduct.product.id == id }
-            ?: return ResponseEntity.badRequest().body("No product with id: $id")
-
-        return moveToShelf(inventoryStock, compartment)
-    }
-
-     */
-
-    private fun changeStockPlacement(oldLocation: CompartmentPosition, newLocation: CompartmentPosition) : ErrorResponse? {
-
-        val oldCompartmentResult = logic.getCompartment(oldLocation)
-        val oldCompartment = oldCompartmentResult.first
-            ?: return oldCompartmentResult.second!!
-
-        val oldProductOnCompartment =
-            productOnCompartmentRepository.findByCompartment(oldCompartment)
-
-        val newCompartmentResult = logic.getCompartment(newLocation)
-
-        val newCompartment = newCompartmentResult.first
-            ?: return newCompartmentResult.second!!
-
-        val newProductOnCompartment =
-            productOnCompartmentRepository.findByCompartment(newCompartment)
-
-        var savedProductOnCompartmentStream = Stream.empty<ProductOnCompartment>()
-
-        if (oldProductOnCompartment != null) {
-            productOnCompartmentRepository.delete(oldProductOnCompartment)
-            oldProductOnCompartment.compartment = newCompartment
-            Stream.concat(savedProductOnCompartmentStream, Stream.of(oldProductOnCompartment))
-                .also { savedProductOnCompartmentStream = it }
-        }
-
-        if (newProductOnCompartment != null) {
-            productOnCompartmentRepository.delete(newProductOnCompartment)
-            newProductOnCompartment.compartment = oldCompartment
-            Stream.concat(savedProductOnCompartmentStream, Stream.of(newProductOnCompartment))
-                .also { savedProductOnCompartmentStream = it }
-        }
-
-        for (productOnCompartment in savedProductOnCompartmentStream)
-            productOnCompartmentRepository.save(productOnCompartment)
-
-        return null
-    }
-
-    private fun moveToInventory(oldLocation: CompartmentPosition) : Pair<String?, ErrorResponse?> {
-        val compartmentResult = logic.getCompartment(oldLocation)
-        val compartment = compartmentResult.first
-            ?: return logic.error(compartmentResult.second!!)
-
-        val productOnCompartment = productOnCompartmentRepository
-            .findByCompartment(compartment)
-            ?: return logic.item("")
-
-        val inventoryStock = inventoryRepository
-            .findByPackageProduct(productOnCompartment.packageProduct)
-            ?: return logic.item("")
-
-        inventoryStock.inventoryQuantity++
-
-        val repo = productOnCompartmentRepository
-        repo.delete(
-            repo.findByCompartment(compartment)!!
-        )
-
-        return logic.item("Removed product at compartment location: $oldLocation")
-    }
 }

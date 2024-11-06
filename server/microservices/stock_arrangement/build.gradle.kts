@@ -27,8 +27,15 @@ repositories {
 }
 
 dependencies {
+
+  implementation("org.springframework.boot:spring-security-oauth2-jose")
+  implementation("org.springframework.boot:spring-boot-starter-security")
+  implementation("org.springframework.session:spring-session-jdbc")
+  implementation("org.springframework.session:spring-session-core")
+  implementation("org.springframework.boot:spring-boot-starter-oauth2-resource-server")
   implementation("com.fasterxml.jackson.module:jackson-module-kotlin:2.17.+")
   implementation("com.fasterxml.jackson.datatype:jackson-datatype-jsr310")
+  implementation("org.springframework.boot:spring-boot-starter-validation")
   implementation("org.springframework.boot:spring-boot-starter-web")
   implementation("org.springframework.boot:spring-boot-starter-data-jpa")
   implementation("org.jetbrains.kotlin:kotlin-reflect")

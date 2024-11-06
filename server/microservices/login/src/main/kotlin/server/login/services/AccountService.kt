@@ -1,16 +1,13 @@
 package server.login.services
 
 import org.springframework.security.core.userdetails.UserDetailsService
-import server.login.api.response.InboundUserDto
+import server.login.api.request.RegistrationDto
 import server.login.entities.User
-import java.util.stream.Stream
+import server.login.value_classes.Password
 
 interface AccountService : UserDetailsService {
 
-    fun saveUser(inboundUserDto: InboundUserDto): User
+    fun registerUser(registrationDto: RegistrationDto): User
 
-    fun getUser(username: String): User
-
-    fun listUsers(): Stream<User>
-
+    fun changePassword(user: User, newPassword: Password)
 }

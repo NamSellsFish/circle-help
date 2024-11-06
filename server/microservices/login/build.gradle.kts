@@ -27,6 +27,10 @@ repositories {
 }
 
 dependencies {
+  implementation("org.springframework:spring-web")
+  implementation("org.springframework.session:spring-session-jdbc")
+  implementation("org.springframework.session:spring-session-core")
+  implementation("org.springframework.boot:spring-boot-starter-oauth2-authorization-server")
   implementation("com.fasterxml.jackson.module:jackson-module-kotlin:2.17.+")
   implementation("org.springframework.boot:spring-boot-starter-security")
   implementation("org.springframework.boot:spring-boot-starter-oauth2-resource-server")
@@ -37,7 +41,7 @@ dependencies {
   implementation("org.springframework.boot:spring-boot-starter-data-jpa")
   implementation("org.jetbrains.kotlin:kotlin-reflect")
   compileOnly("org.projectlombok:lombok")
-  runtimeOnly("com.mysql:mysql-connector-j")
+  implementation("com.mysql:mysql-connector-j")
   annotationProcessor("org.projectlombok:lombok")
   testImplementation("org.springframework.boot:spring-boot-starter-test")
   testImplementation("org.jetbrains.kotlin:kotlin-test-junit5")

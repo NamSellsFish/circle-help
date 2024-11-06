@@ -1,11 +1,12 @@
 package server.circlehelp.api.response
 
+import java.math.BigDecimal
 import java.time.LocalDate
 
 data class ProductDetails(
-    val id: Long,
+    val sku: String,
     val name: String,
-    val price: Double,
-    var wholesalePrice: Double,
+    val price: BigDecimal,
+    var wholesalePrice: BigDecimal,
     var expirationDate: LocalDate?
 )

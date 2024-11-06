@@ -6,50 +6,56 @@ import org.springframework.security.core.userdetails.UserDetails
 import org.springframework.security.core.userdetails.UsernameNotFoundException
 import org.springframework.security.crypto.password.PasswordEncoder
 import org.springframework.stereotype.Service
-import server.login.api.response.InboundUserDto
+import server.login.api.request.RegistrationDto
 import server.login.entities.Admin
 import server.login.entities.Employee
 import server.login.entities.User
 import server.login.repositories.AccountRepository
-import java.util.stream.Stream
+import server.login.entities.Roles
+import server.login.services.InlinedPasswordEncoder
+import server.login.value_classes.EncodedPassword
+import server.login.value_classes.Password
+import kotlin.jvm.optionals.getOrNull
 
 @Service
 @Transactional
-class AccountServiceImpl(@Autowired private val passwordEncoder: PasswordEncoder,
-                         @Autowired private val accountRepository: AccountRepository) : AccountService {
+class AccountServiceImpl(private val passwordEncoder: InlinedPasswordEncoder,
+                         private val accountRepository: AccountRepository)
+    : AccountService {
 
-    override fun saveUser(inboundUserDto: InboundUserDto): User {
+    override fun registerUser(registrationDto: RegistrationDto): User {
 
-        val factory = { username: String, encodedPassword: String ->
-            if (inboundUserDto.role == "Admin")
-                Admin(username, encodedPassword)
-            Employee(username, encodedPassword)
+        val factory = { username: String, encodedPassword: EncodedPassword, role: String ->
+            when (role) {
+                Roles.Admin -> Admin(username, encodedPassword)
+                else -> Employee(username, encodedPassword)
+            }
         }
 
         val user = factory(
-            inboundUserDto.username,
-            passwordEncoder.encode(inboundUserDto.password))
+            registrationDto.username,
+            passwordEncoder.encode(registrationDto.password),
+            registrationDto.role)
 
         return accountRepository.save(user)
     }
 
-    override fun getUser(username: String): User {
-        return accountRepository.findById(username).get()
-    }
+    override fun changePassword(user: User, newPassword: Password) {
 
-    override fun listUsers(): Stream<User> {
-        return accountRepository.findAll().stream()
+        user.encodedPassword = passwordEncoder.encode(newPassword)
+        accountRepository.save(user)
     }
 
     override fun loadUserByUsername(username: String?): UserDetails {
-        if (username == null) throw UsernameNotFoundException("");
+        if (username == null) throw UsernameNotFoundException(null)
 
-        val user = getUser(username)
+        val user = accountRepository.findById(username).getOrNull()
+            ?: throw UsernameNotFoundException(username)
 
         return org.springframework.security.core.userdetails.User.builder()
             .username(username)
-            .password(user.encodedPassword)
-            .roles(username.javaClass.simpleName)
+            .password(user.encodedPassword.value)
+            .roles(user.getRole())
             .build()
     }
 }

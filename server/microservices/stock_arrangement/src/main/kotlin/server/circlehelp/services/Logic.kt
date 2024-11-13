@@ -5,17 +5,22 @@ import org.springframework.stereotype.Service
 import server.circlehelp.api.response.CompartmentPosition
 import server.circlehelp.api.response.ErrorResponse
 import server.circlehelp.entities.Compartment
+import server.circlehelp.entities.EventProduct
 import server.circlehelp.entities.PackageProduct
 import server.circlehelp.entities.ProductOnCompartment
 import server.circlehelp.repositories.CompartmentRepository
 import server.circlehelp.repositories.ProductOnCompartmentRepository
 import server.circlehelp.repositories.RowRepository
+import server.circlehelp.repositories.readonly.ReadonlyEventProductRepository
+import server.circlehelp.repositories.readonly.ReadonlyEventRepository
 import java.time.LocalDate
 
 @Service
 class Logic(private val rowRepository: RowRepository,
             private val compartmentRepository: CompartmentRepository,
-            private val productOnCompartmentRepository: ProductOnCompartmentRepository) {
+            private val productOnCompartmentRepository: ProductOnCompartmentRepository,
+            private val readonlyEventRepository: ReadonlyEventRepository,
+            private val readonlyEventProductRepository: ReadonlyEventProductRepository,) {
 
     fun <T> item(obj: T) : Pair<T?, ErrorResponse?> {
         return Pair(obj, null)
@@ -79,5 +84,11 @@ class Logic(private val rowRepository: RowRepository,
 
     fun notInInventoryResponse(sku: String) : ErrorResponse {
         return ErrorResponse("Product not found in inventory: $sku")
+    }
+
+    fun activeEventProducts() : List<EventProduct> {
+        return readonlyEventProductRepository.findAll().filter {
+            it.event.isActive()
+        }
     }
 }

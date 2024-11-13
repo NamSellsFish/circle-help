@@ -5,13 +5,13 @@ import com.fasterxml.jackson.module.kotlin.registerKotlinModule
 import io.reactivex.rxjava3.core.Scheduler
 import io.reactivex.rxjava3.schedulers.Schedulers
 import org.slf4j.LoggerFactory
+import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.autoconfigure.jackson.Jackson2ObjectMapperBuilderCustomizer
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
-import org.springframework.http.converter.json.Jackson2ObjectMapperBuilder
+import org.springframework.context.annotation.Primary
+import org.springframework.core.annotation.Order
 import java.util.concurrent.Executor
-import java.util.concurrent.Executors
-import kotlin.math.log
 
 @Configuration
 class Config {
@@ -29,14 +29,18 @@ class Config {
     * @author Khoa Anh Pham
     */
     @Bean
+    @Autowired
     fun jackson2ObjectMapperBuilder() =
         Jackson2ObjectMapperBuilderCustomizer { builder -> builder.configure(ObjectMapper().registerKotlinModule()) }
 
-    /**
-     * Rx Scheduler with fixed number of threads.
-     */
     @Bean
-    fun scheduler() : Scheduler {
-        return Schedulers.from(Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors()))
+    fun computationScheduler() : Scheduler {
+        return Schedulers.computation()
     }
+
+    @Bean
+    fun sameThreadScheduler() : Scheduler {
+        return Schedulers.from { it.run() }
+    }
+
 }

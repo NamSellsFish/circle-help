@@ -29,4 +29,21 @@ class Event(
     override var id: Long? = null
 ) : IdObjectBase<Long>() {
 
+    fun asLongRange() : LongRange {
+        return startDate.toEpochDay()..endDate.toEpochDay()
+    }
+
+    fun isActive() : Boolean {
+        return asLongRange().contains(LocalDate.now().toEpochDay())
+    }
+
+    fun getActivity(date: LocalDate) : Int {
+
+        if (date < startDate) return date.compareTo(startDate)
+        else
+        if (date > endDate) return date.compareTo(endDate)
+        else
+        return 0
+    }
+
 }

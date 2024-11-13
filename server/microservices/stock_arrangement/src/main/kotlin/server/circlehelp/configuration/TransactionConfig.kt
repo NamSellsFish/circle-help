@@ -13,6 +13,12 @@ class TransactionConfig {
 
     @Bean
     fun transactionManager(entityManagerFactory: EntityManagerFactory) : PlatformTransactionManager {
-        return JpaTransactionManager(entityManagerFactory)
+        val result = JpaTransactionManager(entityManagerFactory)
+        result.isValidateExistingTransaction = true
+        result.isRollbackOnCommitFailure = true
+        result.isNestedTransactionAllowed = true
+        result.isGlobalRollbackOnParticipationFailure = true
+        result.isFailEarlyOnGlobalRollbackOnly = true
+        return result
     }
 }

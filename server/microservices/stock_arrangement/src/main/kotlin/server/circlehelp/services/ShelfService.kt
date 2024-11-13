@@ -3,19 +3,25 @@ package server.circlehelp.services
 import com.fasterxml.jackson.databind.DatabindException
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.ObjectMapper
+import com.fasterxml.jackson.databind.ObjectReader
 import com.fasterxml.jackson.module.kotlin.readValue
 import io.reactivex.rxjava3.core.Observable
 import io.reactivex.rxjava3.core.Scheduler
 import io.reactivex.rxjava3.core.Single
 import io.reactivex.rxjava3.kotlin.zipWith
+import io.reactivex.rxjava3.schedulers.Schedulers
+import jakarta.annotation.Resource
 import org.slf4j.LoggerFactory
+import org.springframework.beans.factory.annotation.Qualifier
 import org.springframework.http.HttpStatus
 import org.springframework.http.converter.json.Jackson2ObjectMapperBuilder
 import org.springframework.stereotype.Service
+import org.springframework.transaction.annotation.Isolation
 import org.springframework.transaction.annotation.Transactional
 import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestParam
 import server.circlehelp.api.complement
+import server.circlehelp.api.inventory
 import server.circlehelp.api.request.PackageProductItem
 import server.circlehelp.api.response.CompartmentInfo
 import server.circlehelp.api.response.CompartmentPosition
@@ -27,6 +33,7 @@ import server.circlehelp.api.response.ProductID
 import server.circlehelp.api.response.ProductList
 import server.circlehelp.api.response.ProductOnCompartmentDto
 import server.circlehelp.api.response.SwapRequest
+import server.circlehelp.configuration.Config
 import server.circlehelp.entities.Compartment
 import server.circlehelp.entities.InventoryStock
 import server.circlehelp.entities.Product
@@ -37,6 +44,7 @@ import server.circlehelp.repositories.ProductRepository
 import server.circlehelp.repositories.RowRepository
 import server.circlehelp.repositories.readonly.ReadonlyArrivedPackageRepository
 import server.circlehelp.repositories.readonly.ReadonlyCompartmentProductCategoryRepository
+import server.circlehelp.repositories.readonly.ReadonlyEventProductRepository
 import server.circlehelp.repositories.readonly.ReadonlyInventoryRepository
 import server.circlehelp.repositories.readonly.ReadonlyPackageProductRepository
 import server.circlehelp.repositories.readonly.ReadonlyProductCategorizationRepository
@@ -46,7 +54,7 @@ import kotlin.jvm.Throws
 import kotlin.jvm.optionals.getOrNull
 
 @Service
-@Transactional
+@Transactional(isolation = Isolation.REPEATABLE_READ)
 class ShelfService(
     private val productRepository: ProductRepository,
     private val readonlyProductOnCompartmentRepository: ReadonlyProductOnCompartmentRepository,
@@ -59,6 +67,7 @@ class ShelfService(
     private val readonlyCompartmentProductCategoryRepository: ReadonlyCompartmentProductCategoryRepository,
     private val readonlyProductCategorizationRepository: ReadonlyProductCategorizationRepository,
     private val readonlyArrivedPackageRepository: ReadonlyArrivedPackageRepository,
+    private val readonlyEventProductRepository: ReadonlyEventProductRepository,
 
     mapperBuilder: Jackson2ObjectMapperBuilder,
     private val responseBodyWriter: ResponseBodyWriter,
@@ -66,7 +75,7 @@ class ShelfService(
     private val shelfAtomicOpsService: ShelfAtomicOpsService,
     private val blocs: Blocs,
 
-    private val scheduler: Scheduler,
+    @Qualifier("sameThreadScheduler") private val scheduler: Scheduler,
 ) {
     private val objectMapper: ObjectMapper = mapperBuilder.build()
     private val logger = LoggerFactory.getLogger(ShelfService::class.java)
@@ -231,7 +240,6 @@ class ShelfService(
      * - Results in Map<compartment, all products that can fill that compartment>
      *
      */
-    @Transactional(timeout = 60)
     fun autoMove(slowSellCheck: Boolean = false,
                  event: Boolean = false) : String {
 
@@ -264,7 +272,12 @@ class ShelfService(
         }
 
         if (event)
-            continuousArrangement(LinkedList(productRepository.findAll()), eventCompartmentRepository.findAll().map { it.compartment })
+            continuousArrangement(
+                LinkedList(
+                    logic.activeEventProducts().map { it.product }
+                ),
+                eventCompartmentRepository.findAll().map { it.compartment }
+            )
 
         if (true) compartmentsToFill.addAll(compartmentRepository
             .findAll()
@@ -421,7 +434,7 @@ class ShelfService(
                         key == "*" ||
                                 productCategorySets[it]!!.contains(key)
                     }, collection).blockingGet()
-                    logger.info("Moved count: $count")
+                    logger.info("Moved count: $count/${collection.size}")
                 }
 
                 inventoryStockCounts = inventoryStockCounts.mapValues {
@@ -514,29 +527,40 @@ class ShelfService(
         // Fixed: Possible error when size = 1 and stocks.size > 1
         val partitionLimit = (compartments.size / stocks.size).coerceAtLeast(1)
 
+        logger.info("Compartments:")
+        compartments.forEach{logger.info(it.getLocation().toString())}
+
+        logger.info("Remaining: ${compartments.size}")
+        logger.info("Partition Limit: $partitionLimit")
+
         return Observable.defer {
             Observable.fromIterable(stocks.entries)
-                .concatMap({
-                    //logger.info("${objectMapper.writeValueAsString(it.key)}:${it.value}")
-                    Observable.just(it.key).repeat(it.value.coerceAtMost(partitionLimit).toLong())
-                }, 2, scheduler)
+                .concatMap({(inventoryStock, count) ->
+                    logger.info("${inventoryStock.packageProduct.product.sku}:${count}")
+                    Observable.just(inventoryStock).repeat(count.coerceAtMost(partitionLimit).toLong())
+                }, 2)
                 .zipWith(Observable.fromIterable(0..Int.MAX_VALUE))
+                .takeWhile { (_, index) -> index < compartments.size }
                 .map { (inventoryStock, index) ->
                     logger.info("Index: $index")
                     logger.info("Compartment: ${compartments[index].getLocation()}")
-                    shelfAtomicOpsService.moveToShelf(inventoryStock, compartments[index])
+                    shelfAtomicOpsService.moveToShelf(inventoryStock, compartments[index], displace = false)
                 }
-        }.subscribeOn(scheduler)
-            .observeOn(scheduler)
+        }
+            .subscribeOn(scheduler)
             .count()
             .map {
 
                 if (it < compartments.size)
                     partitionProducts(
                         stocks
-                            .mapValues { readonlyInventoryRepository.findById(it.key.id!!).get().inventoryQuantity }
-                            .filterValues { it != 0 },
-                        compartments.subList(it.toInt() - 1, compartments.size)
+                            .mapValues { readonlyInventoryRepository
+                                .findById(it.key.id!!)
+                                .getOrNull()
+                                ?.inventoryQuantity
+                                ?: 0}
+                            .filterValues { it > 0 },
+                        compartments.subList(it.toInt(), compartments.size)
                     ).blockingGet() + it
                 else
                     it

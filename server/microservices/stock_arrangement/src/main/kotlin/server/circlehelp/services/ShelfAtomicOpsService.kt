@@ -3,9 +3,13 @@ package server.circlehelp.services
 import com.fasterxml.jackson.databind.ObjectMapper
 import io.reactivex.rxjava3.core.Observable
 import io.reactivex.rxjava3.core.Scheduler
+import jakarta.annotation.Resource
 import org.slf4j.LoggerFactory.getLogger
+import org.springframework.beans.factory.annotation.Qualifier
 import org.springframework.http.converter.json.Jackson2ObjectMapperBuilder
 import org.springframework.stereotype.Service
+import org.springframework.transaction.annotation.Isolation
+import org.springframework.transaction.annotation.Transactional
 import server.circlehelp.api.complement
 import server.circlehelp.api.response.CompartmentPosition
 import server.circlehelp.api.response.ErrorResponse
@@ -20,6 +24,7 @@ import server.circlehelp.repositories.readonly.ReadonlyProductOnCompartmentRepos
 import java.util.stream.Stream
 
 @Service
+@Transactional(isolation = Isolation.REPEATABLE_READ)
 class ShelfAtomicOpsService(
     private val productOnCompartmentRepository: ProductOnCompartmentRepository,
     private val inventoryRepository: InventoryRepository,
@@ -30,7 +35,7 @@ class ShelfAtomicOpsService(
 
     mapperBuilder: Jackson2ObjectMapperBuilder,
     private val logic: Logic,
-    private val scheduler: Scheduler,
+    @Qualifier("computationScheduler") private val scheduler: Scheduler,
 ) {
     private val objectMapper = mapperBuilder.build<ObjectMapper>()
 
@@ -61,7 +66,7 @@ class ShelfAtomicOpsService(
             if (displace) {
                 moveToInventory(productOnCompartment.compartment.getLocation())
             } else {
-                val message = "Compartment ${productOnCompartment.compartment.getLocation()} is occupied by '${productOnCompartment.packageProduct.product}'"
+                val message = "Tried to arrange '${inventoryStock.packageProduct.product.sku}' but compartment ${productOnCompartment.compartment.getLocation()} is occupied by '${productOnCompartment.packageProduct.product.sku}'"
                 if (doLogging)
                     logger.info(message)
                 return logic.item(message)
@@ -75,7 +80,7 @@ class ShelfAtomicOpsService(
             )
         )
 
-        val message = "Moved product '${inventoryStock.packageProduct.product.sku}' to shelf: ${objectMapper.writeValueAsString(compartment.getLocation())}"
+        val message = "Moved product '${inventoryStock.packageProduct.product.sku}' to compartment: ${compartment.getLocation()}"
 
         if (doLogging)
             logger.info(message)
@@ -196,8 +201,7 @@ class ShelfAtomicOpsService(
                 Unit
             }
         }
-            .subscribeOn(scheduler)
-            .observeOn(scheduler).count().map {
+            .subscribeOn(scheduler).count().map {
                 logger.info("Delete Count: $it")
                 productOnCompartmentRepository.deleteAll()
             })

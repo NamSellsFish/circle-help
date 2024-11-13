@@ -263,6 +263,9 @@ class ShelfService(
             }
         }
 
+        if (event)
+            continuousArrangement(LinkedList(productRepository.findAll()), eventCompartmentRepository.findAll().map { it.compartment })
+
         if (true) compartmentsToFill.addAll(compartmentRepository
             .findAll()
             .filter { readonlyProductOnCompartmentRepository.existsByCompartment(it).complement() })
@@ -727,7 +730,7 @@ class ShelfService(
         return validateAndArrangeProductList(productList, compartmentRepository.findAll())
     }
 
-    fun arrangeEventStocks(@RequestBody productList: ProductList) : String {
+    fun arrangeEventStocks(productList: ProductList) : String {
 
         return validateAndArrangeProductList(productList, eventCompartmentRepository.findAll().map { it.compartment })
     }

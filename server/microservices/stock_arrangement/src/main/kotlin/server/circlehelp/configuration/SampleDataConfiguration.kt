@@ -6,7 +6,9 @@ import server.circlehelp.api.response.CompartmentPosition
 import server.circlehelp.entities.ArrivedPackage
 import server.circlehelp.entities.Compartment
 import server.circlehelp.entities.CompartmentProductCategory
+import server.circlehelp.entities.Event
 import server.circlehelp.entities.EventCompartment
+import server.circlehelp.entities.EventProduct
 import server.circlehelp.entities.FrontCompartment
 import server.circlehelp.entities.ImageSource
 import server.circlehelp.entities.InventoryStock
@@ -20,6 +22,8 @@ import server.circlehelp.repositories.ArrivedPackageRepository
 import server.circlehelp.repositories.CompartmentProductCategoryRepository
 import server.circlehelp.repositories.CompartmentRepository
 import server.circlehelp.repositories.EventCompartmentRepository
+import server.circlehelp.repositories.EventProductRepository
+import server.circlehelp.repositories.EventRepository
 import server.circlehelp.repositories.FrontCompartmentRepository
 import server.circlehelp.repositories.ImageSourceRepository
 import server.circlehelp.repositories.InventoryRepository
@@ -29,6 +33,8 @@ import server.circlehelp.repositories.ProductCategoryRepository
 import server.circlehelp.repositories.ProductOnCompartmentRepository
 import server.circlehelp.repositories.ProductRepository
 import server.circlehelp.repositories.RowRepository
+import server.circlehelp.repositories.readonly.ReadonlyEventProductRepository
+import server.circlehelp.repositories.readonly.ReadonlyEventRepository
 import server.circlehelp.services.Blocs
 import server.circlehelp.services.Logic
 import java.math.BigDecimal
@@ -54,6 +60,11 @@ class SampleDataConfiguration(
     private val productCategorizationRepository: ProductCategorizationRepository,
     private val imageSourceRepository: ImageSourceRepository,
     private val compartmentProductCategoryRepository: CompartmentProductCategoryRepository,
+    private val eventRepository: EventRepository,
+    private val eventProductRepository: EventProductRepository,
+
+    private val readonlyEventRepository: ReadonlyEventRepository,
+    private val readonlyEventProductRepository: ReadonlyEventProductRepository,
 
     private val logic: Logic,
 ) {
@@ -79,6 +90,7 @@ class SampleDataConfiguration(
         //compartmentNumberingByShelf()
         //lunchablesProduct()
         //lunchablesDelivery()
+        //eventProduct()
     }
 
     @Deprecated("Use 'compartmentNumberingByShelf'")
@@ -130,6 +142,7 @@ class SampleDataConfiguration(
         }
     }
      */
+
 
     private fun compartmentNumberingByShelf() {
         for (compartment in compartmentRepository.findAll()) {
@@ -364,6 +377,14 @@ class SampleDataConfiguration(
         arrivedPackageRepository.save(arrivedPackage)
         packageProductRepository.save(packageProduct3)
         inventoryRepository.save(InventoryStock(packageProduct3, 20))
+
+        val startDate = LocalDate.of(2024, 3, 25)
+        val endDate = LocalDate.of(2025, 1, 26)
+        val event = Event("Event Company's Event", startDate, endDate)
+        val eventProduct1 = EventProduct(products[2], event)
+        val eventProduct2 = EventProduct(products[1], event)
+
+        eventRepository
     }
 
     private fun addStock() {

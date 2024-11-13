@@ -12,6 +12,10 @@ spring:
     hibernate:
       ddl-auto: update
 
+    #database-platform: org.hibernate.dialect.MySQL5Dialect
+    show-sql: true
+    properties.hibernate.transaction.jta.platform: org.hibernate.service.jta.platform.internal.BitsJtaPlatform
+
   session:
     jdbc:
       initialize-schema: always

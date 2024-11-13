@@ -28,6 +28,7 @@ repositories {
 
 dependencies {
 
+  implementation("jakarta.transaction:jakarta.transaction-api")
   implementation("io.reactivex.rxjava3:rxkotlin:3.0.1")
   implementation("io.reactivex.rxjava3:rxjava")
   implementation("org.springframework.boot:spring-boot-starter-security")

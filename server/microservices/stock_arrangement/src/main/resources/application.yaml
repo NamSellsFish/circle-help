@@ -16,7 +16,7 @@ spring:
     jdbc:
       initialize-schema: always
 
-
+  output.ansi.enabled : DETECT
 
 server:
   port: 8001
@@ -24,6 +24,7 @@ server:
 logging:
   level:
     org.springframework.security: trace
+  file.name: shelf.log
 
 jakarta:
   persistence:

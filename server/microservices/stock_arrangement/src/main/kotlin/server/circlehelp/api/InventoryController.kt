@@ -28,6 +28,8 @@ class InventoryController(private val inventoryRepository: InventoryRepository,
                           private val imageSourceRepository: ReadonlyImageSourceRepository,
                           private val productCategorizationRepository: ReadonlyProductCategorizationRepository,
 
+                          private val readonlyProductCategorizationRepository: ReadonlyProductCategorizationRepository,
+
                           private val logic: Logic,
                           objectMapperBuilder: Jackson2ObjectMapperBuilder) {
 
@@ -57,6 +59,7 @@ class InventoryController(private val inventoryRepository: InventoryRepository,
                 val item = items[0].packageProduct.product
                 val packageProduct = items[0].packageProduct
                 InventoryStockItem(
+                    packageProduct.orderedPackage.id!!,
                     item.sku,
                     item.name,
                     item.price,
@@ -69,7 +72,7 @@ class InventoryController(private val inventoryRepository: InventoryRepository,
                     }),
                     packageProduct.expirationDate,
                     imageSourceRepository.findAllByProduct(item).firstOrNull()?.url,
-                    productCategorizationRepository.findAllByProduct(item).map { it.category.name }
+                    readonlyProductCategorizationRepository.findAllByProduct(item).map { it.category.name }
                 )
             }
 

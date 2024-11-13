@@ -5,6 +5,7 @@ import java.math.BigDecimal
 import java.time.LocalDate
 
 data class InventoryStockItem(
+    val packageID: Long,
     val sku: String,
     val name: String,
     val price: BigDecimal,
@@ -16,16 +17,16 @@ data class InventoryStockItem(
 ) {
 
     @JsonIgnore
-    fun getExpirationDateOrMax() = expirationDate ?: LocalDate.MAX
+    fun getExpirationDateOrMax(): LocalDate = expirationDate ?: LocalDate.MAX
 
 
     companion object {
         fun getComparator(fieldName: String) : Comparator<InventoryStockItem> {
-            if (compartorsMap.containsKey(fieldName)) return compartorsMap[fieldName]!!
-            else return Comparator { o1, o2 -> o1.toString().compareTo(o2.toString()) }
+            return compartorsMap[fieldName]?: Comparator { o1, o2 -> o1.toString().compareTo(o2.toString()) }
         }
 
         val compartorsMap: Map<String, Comparator<InventoryStockItem>> = mapOf(
+                    "packageID" to Comparator { o1, o2 -> o1.packageID.compareTo(o2.packageID) },
                     "sku" to Comparator { o1, o2 -> o1.sku.compareTo(o2.sku) },
                     "name" to Comparator { o1, o2 -> o1.name.compareTo(o2.name) },
                     "price" to Comparator { o1, o2 -> o1.price.compareTo(o2.price) },

@@ -10,12 +10,10 @@ import server.circlehelp.entities.ProductOnCompartment
 import server.circlehelp.repositories.CompartmentRepository
 import server.circlehelp.repositories.ProductOnCompartmentRepository
 import server.circlehelp.repositories.RowRepository
-import server.circlehelp.repositories.ShelvesRepository
 import java.time.LocalDate
 
 @Service
-class Logic(private val shelvesRepository: ShelvesRepository,
-            private val rowRepository: RowRepository,
+class Logic(private val rowRepository: RowRepository,
             private val compartmentRepository: CompartmentRepository,
             private val productOnCompartmentRepository: ProductOnCompartmentRepository) {
 
@@ -28,12 +26,9 @@ class Logic(private val shelvesRepository: ShelvesRepository,
     }
 
     fun getCompartment(compartmentPosition: CompartmentPosition) : Pair<Compartment?, ErrorResponse?> {
-        val (shelfNumber, rowNumber, compartmentNumber) = compartmentPosition
+        val (rowNumber, compartmentNumber) = compartmentPosition
 
-        val shelf = shelvesRepository.findByNumber(shelfNumber)
-            ?: return error(rowNotFoundResponse(rowNumber))
-
-        val row = rowRepository.findByShelfAndNumber(shelf, rowNumber)
+        val row = rowRepository.findByNumber(rowNumber)
             ?: return error(rowNotFoundResponse(rowNumber))
 
         val compartment = compartmentRepository.findByLayerAndNumber(row, compartmentNumber)

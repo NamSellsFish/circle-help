@@ -10,8 +10,7 @@ import server.circlehelp.entities.ProductOnCompartment
 @Repository
 interface ProductOnCompartmentRepository : JpaRepository<ProductOnCompartment, Long> {
 
-
-    fun findByCompartment(compartment: Compartment) : ProductOnCompartment?
+    fun deleteByCompartment(compartment: Compartment)
 
     /*
     fun overwrite(productOnCompartment: ProductOnCompartment) : ProductOnCompartment {

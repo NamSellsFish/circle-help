@@ -21,7 +21,9 @@ class SecurityFilterConfig {
     ) : SecurityFilterChain {
         http {
             authorizeHttpRequests {
-                authorize(anyRequest, authenticated)
+                authorize(anyRequest, permitAll)
+                authorize("/kill", permitAll)
+                //authorize(anyRequest, authenticated)
             }
             csrf {
                 disable()

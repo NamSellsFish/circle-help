@@ -28,7 +28,8 @@ repositories {
 
 dependencies {
 
-  implementation("org.springframework.boot:spring-security-oauth2-jose")
+  implementation("io.reactivex.rxjava3:rxkotlin:3.0.1")
+  implementation("io.reactivex.rxjava3:rxjava")
   implementation("org.springframework.boot:spring-boot-starter-security")
   implementation("org.springframework.session:spring-session-jdbc")
   implementation("org.springframework.session:spring-session-core")

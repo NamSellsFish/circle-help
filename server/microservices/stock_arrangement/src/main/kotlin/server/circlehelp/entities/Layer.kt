@@ -9,16 +9,15 @@ import jakarta.persistence.Table
 import jakarta.persistence.UniqueConstraint
 import jakarta.validation.constraints.Min
 import jakarta.validation.constraints.NotNull
+import server.circlehelp.entities.base.IdObjectBase
 
 @Entity
-@Table(uniqueConstraints = [UniqueConstraint(columnNames = ["shelf_id", "number"])])
 class Layer(
-    @ManyToOne var shelf: Shelf,
 
     @NotNull @Min(1)
-    @Column(nullable = false)
+    @Column(unique = true, nullable = false)
     var number: Int,
 
-    @Id @GeneratedValue var id: Long? = null
-) {
+    @Id @GeneratedValue override var id: Long? = null
+) : IdObjectBase<Long>()  {
 }

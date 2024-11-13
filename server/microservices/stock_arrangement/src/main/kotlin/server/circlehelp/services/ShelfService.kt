@@ -17,6 +17,7 @@ import server.circlehelp.repositories.ProductOnCompartmentRepository
 import server.circlehelp.repositories.ProductRepository
 import server.circlehelp.repositories.RowRepository
 import server.circlehelp.repositories.ShelvesRepository
+import server.circlehelp.repositories.readonly.ReadonlyProductOnCompartmentRepository
 import java.util.stream.Stream
 
 @Service
@@ -30,6 +31,8 @@ class ShelfService(
     private val packageProductRepository: PackageProductRepository,
     private val frontCompartmentRepository: FrontCompartmentRepository,
     private val eventCompartmentRepository: EventCompartmentRepository,
+
+    private val readonlyProductOnCompartmentRepository: ReadonlyProductOnCompartmentRepository,
 
     mapperBuilder: Jackson2ObjectMapperBuilder,
     private val logic: Logic,
@@ -48,7 +51,7 @@ class ShelfService(
 
         inventoryRepository.save(inventoryStock)
 
-        val productOnCompartment = productOnCompartmentRepository.findByCompartment(compartment)
+        val productOnCompartment = readonlyProductOnCompartmentRepository.findByCompartment(compartment)
 
         if (productOnCompartment != null) {
             if (displace) {
@@ -93,7 +96,7 @@ class ShelfService(
             ?: return oldCompartmentResult.second!!
 
         val oldProductOnCompartment =
-            productOnCompartmentRepository.findByCompartment(oldCompartment)
+            readonlyProductOnCompartmentRepository.findByCompartment(oldCompartment)
 
         val newCompartmentResult = logic.getCompartment(newLocation)
 
@@ -101,7 +104,7 @@ class ShelfService(
             ?: return newCompartmentResult.second!!
 
         val newProductOnCompartment =
-            productOnCompartmentRepository.findByCompartment(newCompartment)
+            readonlyProductOnCompartmentRepository.findByCompartment(newCompartment)
 
         var savedProductOnCompartmentStream = Stream.empty<ProductOnCompartment>()
 
@@ -140,7 +143,7 @@ class ShelfService(
 
     fun moveToInventory(compartment: Compartment) : Pair<String?, ErrorResponse?> {
 
-        val productOnCompartment = productOnCompartmentRepository
+        val productOnCompartment = readonlyProductOnCompartmentRepository
             .findByCompartment(compartment)
             ?: return logic.item("")
 
@@ -150,10 +153,7 @@ class ShelfService(
 
         inventoryStock.inventoryQuantity++
 
-        val repo = productOnCompartmentRepository
-        repo.delete(
-            repo.findByCompartment(compartment)!!
-        )
+        productOnCompartmentRepository.delete(productOnCompartment)
 
         return logic.item("Removed product at compartment location: ${compartment.getLocation()}")
     }

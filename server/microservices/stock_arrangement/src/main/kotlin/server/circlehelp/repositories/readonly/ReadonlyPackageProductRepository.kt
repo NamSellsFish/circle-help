@@ -1,19 +1,17 @@
-package server.circlehelp.repositories
+package server.circlehelp.repositories.readonly
 
-import jakarta.persistence.ManyToOne
-import org.springframework.data.jpa.repository.JpaRepository
 import org.springframework.stereotype.Repository
 import server.circlehelp.entities.ArrivedPackage
 import server.circlehelp.entities.PackageProduct
 import server.circlehelp.entities.Product
 
 @Repository
-interface PackageProductRepository : JpaRepository<PackageProduct, Long> {
-
+interface ReadonlyPackageProductRepository : ReadonlyRepository<PackageProduct, Long> {
     fun findByOrderedPackageAndProduct(orderedPackage: ArrivedPackage,
-                           product: Product
+                                       product: Product
     ) : PackageProduct?
 
     fun findAllByOrderedPackage(orderedPackage: ArrivedPackage) : List<PackageProduct>
     fun findAllByProduct(product: Product) : List<PackageProduct>
+
 }

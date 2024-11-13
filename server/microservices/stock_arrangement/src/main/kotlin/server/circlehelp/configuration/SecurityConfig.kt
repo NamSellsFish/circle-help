@@ -37,13 +37,15 @@ import javax.sql.DataSource
 class SecurityConfig {
 
     @Bean
-    fun corsConfigurationSource(): CorsConfigurationSource {
+    fun corsConfigurationSource(): UrlBasedCorsConfigurationSource {
         /* Note: Allowing everything like this is not the correct way, so never do this in a practical environment. */
         val configuration = CorsConfiguration()
         configuration.setAllowedOriginPatterns(listOf("*"))
         configuration.allowedMethods =
             listOf("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS")
         configuration.allowedHeaders = listOf("*")
+        configuration.allowCredentials = true
+        configuration.exposedHeaders = listOf("*")
         val source = UrlBasedCorsConfigurationSource()
         source.registerCorsConfiguration("/**", configuration)
         return source

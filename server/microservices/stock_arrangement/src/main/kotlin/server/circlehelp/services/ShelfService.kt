@@ -16,7 +16,6 @@ import server.circlehelp.repositories.PackageProductRepository
 import server.circlehelp.repositories.ProductOnCompartmentRepository
 import server.circlehelp.repositories.ProductRepository
 import server.circlehelp.repositories.RowRepository
-import server.circlehelp.repositories.ShelvesRepository
 import server.circlehelp.repositories.readonly.ReadonlyProductOnCompartmentRepository
 import java.util.stream.Stream
 
@@ -25,7 +24,6 @@ class ShelfService(
     private val productRepository: ProductRepository,
     private val productOnCompartmentRepository: ProductOnCompartmentRepository,
     private val inventoryRepository: InventoryRepository,
-    private val shelvesRepository: ShelvesRepository,
     private val rowRepository: RowRepository,
     private val compartmentRepository: CompartmentRepository,
     private val packageProductRepository: PackageProductRepository,

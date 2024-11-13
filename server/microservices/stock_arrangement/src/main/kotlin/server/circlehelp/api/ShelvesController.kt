@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import org.slf4j.LoggerFactory
 import org.springframework.http.ResponseEntity
 import org.springframework.http.converter.json.Jackson2ObjectMapperBuilder
+import org.springframework.stereotype.Controller
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.PutMapping
@@ -22,7 +23,7 @@ import server.circlehelp.services.ShelfService
 
 const val shelf = "/shelves"
 
-@RestController
+@Controller
 @RequestMapping("$baseURL$shelf")
 class ShelvesController(
     mapperBuilder: Jackson2ObjectMapperBuilder,

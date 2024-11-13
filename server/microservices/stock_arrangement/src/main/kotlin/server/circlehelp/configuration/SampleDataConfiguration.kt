@@ -384,7 +384,9 @@ class SampleDataConfiguration(
         val eventProduct1 = EventProduct(products[2], event)
         val eventProduct2 = EventProduct(products[1], event)
 
-        eventRepository
+        eventRepository.save(event)
+        eventProductRepository.save(eventProduct1)
+        eventProductRepository.save(eventProduct2)
     }
 
     private fun addStock() {

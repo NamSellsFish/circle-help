@@ -33,12 +33,12 @@ class Config {
     fun jackson2ObjectMapperBuilder() =
         Jackson2ObjectMapperBuilderCustomizer { builder -> builder.configure(ObjectMapper().registerKotlinModule()) }
 
-    @Bean
+    @Bean(BeanQualifiers.computationScheduler)
     fun computationScheduler() : Scheduler {
         return Schedulers.computation()
     }
 
-    @Bean
+    @Bean(BeanQualifiers.sameThreadScheduler)
     fun sameThreadScheduler() : Scheduler {
         return Schedulers.from { it.run() }
     }

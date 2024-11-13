@@ -3,14 +3,12 @@ package server.circlehelp.services
 import com.fasterxml.jackson.databind.DatabindException
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.ObjectMapper
-import com.fasterxml.jackson.databind.ObjectReader
 import com.fasterxml.jackson.module.kotlin.readValue
 import io.reactivex.rxjava3.core.Observable
 import io.reactivex.rxjava3.core.Scheduler
 import io.reactivex.rxjava3.core.Single
 import io.reactivex.rxjava3.kotlin.zipWith
 import io.reactivex.rxjava3.schedulers.Schedulers
-import jakarta.annotation.Resource
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Qualifier
 import org.springframework.http.HttpStatus
@@ -21,7 +19,6 @@ import org.springframework.transaction.annotation.Transactional
 import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestParam
 import server.circlehelp.api.complement
-import server.circlehelp.api.inventory
 import server.circlehelp.api.request.PackageProductItem
 import server.circlehelp.api.response.CompartmentInfo
 import server.circlehelp.api.response.CompartmentPosition
@@ -33,7 +30,7 @@ import server.circlehelp.api.response.ProductID
 import server.circlehelp.api.response.ProductList
 import server.circlehelp.api.response.ProductOnCompartmentDto
 import server.circlehelp.api.response.SwapRequest
-import server.circlehelp.configuration.Config
+import server.circlehelp.configuration.BeanQualifiers
 import server.circlehelp.entities.Compartment
 import server.circlehelp.entities.InventoryStock
 import server.circlehelp.entities.Product
@@ -75,7 +72,9 @@ class ShelfService(
     private val shelfAtomicOpsService: ShelfAtomicOpsService,
     private val blocs: Blocs,
 
-    @Qualifier("sameThreadScheduler") private val scheduler: Scheduler,
+
+    @Qualifier(BeanQualifiers.computationScheduler) private val computationScheduler: Scheduler,
+    @Qualifier(BeanQualifiers.sameThreadScheduler) private val sameThreadScheduler: Scheduler,
 ) {
     private val objectMapper: ObjectMapper = mapperBuilder.build()
     private val logger = LoggerFactory.getLogger(ShelfService::class.java)
@@ -86,6 +85,8 @@ class ShelfService(
         rowNumber: Int,
         compartmentNumber: Int
     ): ProductDetails? {
+
+        Schedulers.computation()
 
         val compartmentResult =
             logic.getCompartment(
@@ -541,13 +542,13 @@ class ShelfService(
                 }, 2)
                 .zipWith(Observable.fromIterable(0..Int.MAX_VALUE))
                 .takeWhile { (_, index) -> index < compartments.size }
-                .map { (inventoryStock, index) ->
-                    logger.info("Index: $index")
-                    logger.info("Compartment: ${compartments[index].getLocation()}")
-                    shelfAtomicOpsService.moveToShelf(inventoryStock, compartments[index], displace = false)
-                }
         }
-            .subscribeOn(scheduler)
+            .observeOn(sameThreadScheduler)
+            .map { (inventoryStock, index) ->
+                logger.info("Index: $index")
+                logger.info("Compartment: ${compartments[index].getLocation()}")
+                shelfAtomicOpsService.moveToShelf(inventoryStock, compartments[index], displace = false)
+            }
             .count()
             .map {
 

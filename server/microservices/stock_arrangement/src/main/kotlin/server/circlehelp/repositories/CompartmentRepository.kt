@@ -6,6 +6,5 @@ import server.circlehelp.entities.Compartment
 import server.circlehelp.entities.Layer
 
 @Repository
-interface CompartmentRepository : JpaRepository<Compartment, Long> {
-    fun findByLayerAndNumber(layer: Layer, number: Int) : Compartment?
+interface CompartmentRepository : TransactionalJpaRepository<Compartment, Long> {
 }

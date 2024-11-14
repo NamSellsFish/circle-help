@@ -5,4 +5,4 @@ import org.springframework.stereotype.Repository
 import server.circlehelp.entities.EventProduct
 
 @Repository
-interface EventProductRepository : JpaRepository<EventProduct, Long>
+interface EventProductRepository : TransactionalJpaRepository<EventProduct, Long>

@@ -8,7 +8,7 @@ import server.circlehelp.entities.Compartment
 import server.circlehelp.entities.ProductOnCompartment
 
 @Repository
-interface ProductOnCompartmentRepository : JpaRepository<ProductOnCompartment, Long> {
+interface ProductOnCompartmentRepository : TransactionalJpaRepository<ProductOnCompartment, Long> {
 
     fun deleteByCompartment(compartment: Compartment)
 

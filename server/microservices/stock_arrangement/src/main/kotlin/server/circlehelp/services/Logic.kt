@@ -2,22 +2,23 @@ package server.circlehelp.services
 
 import org.springframework.http.HttpStatus
 import org.springframework.stereotype.Service
+import server.circlehelp.annotations.RepeatableReadTransaction
 import server.circlehelp.api.response.CompartmentPosition
 import server.circlehelp.api.response.ErrorResponse
 import server.circlehelp.entities.Compartment
 import server.circlehelp.entities.EventProduct
 import server.circlehelp.entities.PackageProduct
 import server.circlehelp.entities.ProductOnCompartment
-import server.circlehelp.repositories.CompartmentRepository
 import server.circlehelp.repositories.ProductOnCompartmentRepository
-import server.circlehelp.repositories.RowRepository
+import server.circlehelp.repositories.readonly.ReadonlyCompartmentRepository
 import server.circlehelp.repositories.readonly.ReadonlyEventProductRepository
 import server.circlehelp.repositories.readonly.ReadonlyEventRepository
+import server.circlehelp.repositories.readonly.ReadonlyRowRepository
 import java.time.LocalDate
 
 @Service
-class Logic(private val rowRepository: RowRepository,
-            private val compartmentRepository: CompartmentRepository,
+class Logic(private val readonlyRowRepository: ReadonlyRowRepository,
+            private val readonlyCompartmentRepository: ReadonlyCompartmentRepository,
             private val productOnCompartmentRepository: ProductOnCompartmentRepository,
             private val readonlyEventRepository: ReadonlyEventRepository,
             private val readonlyEventProductRepository: ReadonlyEventProductRepository,) {
@@ -30,13 +31,14 @@ class Logic(private val rowRepository: RowRepository,
         return Pair(null, errorResponse)
     }
 
+    @RepeatableReadTransaction(readOnly = true)
     fun getCompartment(compartmentPosition: CompartmentPosition) : Pair<Compartment?, ErrorResponse?> {
         val (rowNumber, compartmentNumber) = compartmentPosition
 
-        val row = rowRepository.findByNumber(rowNumber)
+        val row = readonlyRowRepository.findByNumber(rowNumber)
             ?: return error(rowNotFoundResponse(rowNumber))
 
-        val compartment = compartmentRepository.findByLayerAndNumber(row, compartmentNumber)
+        val compartment = readonlyCompartmentRepository.findByLayerAndNumber(row, compartmentNumber)
             ?: return error(compartmentNotFoundResponse(compartmentNumber))
 
         return item(compartment)
@@ -46,6 +48,7 @@ class Logic(private val rowRepository: RowRepository,
         return packageProduct.expirationDate != null && LocalDate.now().plusDays(1) >= packageProduct.expirationDate
     }
 
+    @RepeatableReadTransaction
     fun updateExpiration(productOnCompartment: ProductOnCompartment) : Boolean {
 
         val expiring = isExpiring(productOnCompartment.packageProduct)
@@ -86,6 +89,7 @@ class Logic(private val rowRepository: RowRepository,
         return ErrorResponse("Product not found in inventory: $sku")
     }
 
+    @RepeatableReadTransaction(readOnly = true)
     fun activeEventProducts() : List<EventProduct> {
         return readonlyEventProductRepository.findAll().filter {
             it.event.isActive()

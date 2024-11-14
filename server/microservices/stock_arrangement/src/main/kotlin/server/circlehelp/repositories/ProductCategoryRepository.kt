@@ -5,4 +5,4 @@ import org.springframework.stereotype.Repository
 import server.circlehelp.entities.ProductCategory
 
 @Repository
-interface ProductCategoryRepository : JpaRepository<ProductCategory, String>
+interface ProductCategoryRepository : TransactionalJpaRepository<ProductCategory, String>

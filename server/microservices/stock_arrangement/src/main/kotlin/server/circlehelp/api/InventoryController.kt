@@ -15,6 +15,7 @@ import server.circlehelp.repositories.readonly.ReadonlyImageSourceRepository
 import server.circlehelp.repositories.readonly.ReadonlyProductCategorizationRepository
 import server.circlehelp.services.Logic
 import java.math.BigDecimal
+import java.util.Comparator
 
 const val inventory = "/inventory"
 @Controller
@@ -30,6 +31,7 @@ class InventoryController(private val inventoryRepository: InventoryRepository,
     private val objectMapper = objectMapperBuilder.build<ObjectMapper>()
     private val logger = LoggerFactory.getLogger(InventoryController::class.java)
 
+
     @GetMapping(inventory)
     fun getInventory(@RequestParam(defaultValue = "") searchTerm: String,
                      @RequestParam(defaultValue = "0") minQuantity: Int,
@@ -37,7 +39,7 @@ class InventoryController(private val inventoryRepository: InventoryRepository,
                      @RequestParam(defaultValue = "0") minPrice: BigDecimal,
                      @RequestParam(defaultValue = Integer.MAX_VALUE.toString()) maxPrice: BigDecimal,
                      @RequestParam(defaultValue = "") sortColumn: String,
-                     @RequestParam(defaultValue = "False") ascending: Boolean): ResponseEntity<String> {
+                     @RequestParam(defaultValue = "") sortOption: String): ResponseEntity<String> {
 
         val inventoryStock = inventoryRepository
             .findAll()
@@ -94,13 +96,20 @@ class InventoryController(private val inventoryRepository: InventoryRepository,
          */
 
         val comparator = InventoryStockItem.getComparator(sortColumn).let {
-            when {
-                ascending.complement() -> it.reversed()
-                else -> it
+            when (sortOption) {
+                "desc" -> it.reversed()
+                "asc" -> it
+                else -> null
             }
         }
 
-        val body = result.filter { (it.quantity in minQuantity..maxQuantity) }.sorted(comparator)
+        val body = result.filter { (it.quantity in minQuantity..maxQuantity) }
+            .let {
+                if (comparator != null)
+                    it.sorted(comparator)
+                else
+                    it
+            }
 
         return ResponseEntity.ok(objectMapper.writeValueAsString(body))
     }

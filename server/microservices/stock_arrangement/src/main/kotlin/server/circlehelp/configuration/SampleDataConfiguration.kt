@@ -2,6 +2,7 @@ package server.circlehelp.configuration
 
 import org.springframework.context.annotation.Configuration
 import org.springframework.transaction.annotation.Transactional
+import server.circlehelp.annotations.RepeatableReadTransaction
 import server.circlehelp.api.response.CompartmentPosition
 import server.circlehelp.entities.ArrivedPackage
 import server.circlehelp.entities.Compartment
@@ -44,7 +45,7 @@ import java.util.Locale
 import java.util.stream.Collectors.groupingBy
 
 @Configuration
-@Transactional
+@RepeatableReadTransaction
 class SampleDataConfiguration(
     private val arrivedPackageRepository: ArrivedPackageRepository,
     private val packageProductRepository: PackageProductRepository,
@@ -76,6 +77,7 @@ class SampleDataConfiguration(
             setupSpecialCompartments()
             setupProductArrangement()
             expiredPackage()
+            compartmentNumberingByShelf()
 
             eventProduct()
             setupCompartmentProductCategory()
@@ -171,6 +173,9 @@ class SampleDataConfiguration(
 
         productCategorizationRepository.save(ProductCategorization(lunchableProduct, foodCategory))
         productCategorizationRepository.save(ProductCategorization(lunchableProduct, drinkCategory))
+
+
+        imageSourceRepository.save(ImageSource("https://placehold.co/400?text=Lunch-ables", lunchableProduct))
     }
 
     private fun lunchablesDelivery() {

@@ -6,18 +6,15 @@ import org.springframework.data.jpa.repository.Query
 import org.springframework.stereotype.Repository
 import org.springframework.transaction.annotation.Isolation
 import org.springframework.transaction.annotation.Transactional
+import server.circlehelp.annotations.RepeatableReadTransaction
 import server.circlehelp.entities.InventoryStock
 import server.circlehelp.entities.PackageProduct
 
 @Repository
-interface InventoryRepository : JpaRepository<InventoryStock, Long> {
-
-    fun findByPackageProduct(packageProduct: PackageProduct): InventoryStock?
-
-    fun findAllByOrderByPackageProductExpirationDateDesc(): List<InventoryStock>
+interface InventoryRepository : TransactionalJpaRepository<InventoryStock, Long> {
 
     @Modifying
-    @Transactional(isolation = Isolation.REPEATABLE_READ)
+    @RepeatableReadTransaction
     @Query("update InventoryStock i set i.inventoryQuantity = i.inventoryQuantity + 1 where i.id = :id")
     fun incrementQuantityById(id: Long)
 }

@@ -5,5 +5,5 @@ import org.springframework.stereotype.Repository
 import server.circlehelp.entities.ArrivedPackage
 
 @Repository
-interface ArrivedPackageRepository : JpaRepository<ArrivedPackage, Long>
+interface ArrivedPackageRepository : TransactionalJpaRepository<ArrivedPackage, Long>
 

@@ -4,12 +4,15 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import io.reactivex.rxjava3.core.Observable
 import io.reactivex.rxjava3.core.Scheduler
 import jakarta.annotation.Resource
+import jakarta.persistence.EntityManager
 import org.slf4j.LoggerFactory.getLogger
 import org.springframework.beans.factory.annotation.Qualifier
+import org.springframework.context.ApplicationContext
 import org.springframework.http.converter.json.Jackson2ObjectMapperBuilder
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Isolation
 import org.springframework.transaction.annotation.Transactional
+import server.circlehelp.annotations.RepeatableReadTransaction
 import server.circlehelp.api.complement
 import server.circlehelp.api.response.CompartmentPosition
 import server.circlehelp.api.response.ErrorResponse
@@ -24,7 +27,7 @@ import server.circlehelp.repositories.readonly.ReadonlyProductOnCompartmentRepos
 import java.util.stream.Stream
 
 @Service
-@Transactional(isolation = Isolation.REPEATABLE_READ)
+@RepeatableReadTransaction
 class ShelfAtomicOpsService(
     private val productOnCompartmentRepository: ProductOnCompartmentRepository,
     private val inventoryRepository: InventoryRepository,
@@ -36,12 +39,39 @@ class ShelfAtomicOpsService(
     mapperBuilder: Jackson2ObjectMapperBuilder,
     private val logic: Logic,
     @Qualifier("computationScheduler") private val scheduler: Scheduler,
+    private val applicationContext: ApplicationContext,
+    private val callerService: CallerService,
+    private val moveToInventoryService: MoveToInventoryService,
+    private val entityManager: EntityManager,
 ) {
     private val objectMapper = mapperBuilder.build<ObjectMapper>()
 
     private val logger = getLogger(ShelfAtomicOpsService::class.java)
 
+    public val proxy : ShelfAtomicOpsService by lazy {
+        val result = applicationContext.getBean(ShelfAtomicOpsService::class.java)
+        if (result === this) throw AssertionError("Expected proxy, received original object.")
+        result
+    }
+
+    val original : ShelfAtomicOpsService
+        get() {
+            return this
+        }
+
     fun moveToShelf(inventoryStock: InventoryStock,
+                    compartment: Compartment,
+                    displace: Boolean = true,
+                    allowExpiring: Boolean = false,
+                    doLogging: Boolean = true) : Pair<String?, ErrorResponse?> {
+        return callerService.call {
+            proxy.moveToInventory(compartment, doLogging = false)
+            proxy.moveToShelfImpl(inventoryStock, compartment, displace, allowExpiring, doLogging)
+        }
+    }
+
+    @RepeatableReadTransaction
+    fun moveToShelfImpl(inventoryStock: InventoryStock,
                     compartment: Compartment,
                     displace: Boolean = true,
                     allowExpiring: Boolean = false,
@@ -53,32 +83,28 @@ class ShelfAtomicOpsService(
                 logic.expiredProductArrangementAttemptResponse(inventoryStock.packageProduct))
         }
 
-        if (inventoryStock.inventoryQuantity == 1) {
-            inventoryRepository.delete(inventoryStock)
-        } else {
-            inventoryStock.inventoryQuantity--
-            inventoryRepository.save(inventoryStock)
-        }
+        run {
 
-        val productOnCompartment = readonlyProductOnCompartmentRepository.findByCompartment(compartment)
-
-        if (productOnCompartment != null) {
-            if (displace) {
-                moveToInventory(productOnCompartment.compartment.getLocation())
+            if (inventoryStock.inventoryQuantity == 1) {
+                inventoryRepository.delete(inventoryStock)
             } else {
-                val message = "Tried to arrange '${inventoryStock.packageProduct.product.sku}' but compartment ${productOnCompartment.compartment.getLocation()} is occupied by '${productOnCompartment.packageProduct.product.sku}'"
-                if (doLogging)
-                    logger.info(message)
-                return logic.item(message)
+                inventoryStock.inventoryQuantity--
+                inventoryRepository.save(inventoryStock)
             }
-        }
 
-        productOnCompartmentRepository.save(
+            val productOnCompartment =
+                readonlyProductOnCompartmentRepository.findByCompartment(compartment)
+
+            val newProductOnCompartment = productOnCompartment?.apply {
+                packageProduct = inventoryStock.packageProduct
+            } ?:
             ProductOnCompartment(
                 compartment,
                 inventoryStock.packageProduct
             )
-        )
+
+            productOnCompartmentRepository.save(newProductOnCompartment)
+        }
 
         val message = "Moved product '${inventoryStock.packageProduct.product.sku}' to compartment: ${compartment.getLocation()}"
 
@@ -121,6 +147,8 @@ class ShelfAtomicOpsService(
         return swapStockPlacement(oldCompartment, newCompartment)
     }
 
+
+    @RepeatableReadTransaction
     fun swapStockPlacement(oldCompartment: Compartment, newCompartment: Compartment, doLogging: Boolean = true) : ErrorResponse? {
         val newProductOnCompartment =
             readonlyProductOnCompartmentRepository.findByCompartment(newCompartment)
@@ -144,18 +172,30 @@ class ShelfAtomicOpsService(
             Stream.concat(savedProductOnCompartmentStream, Stream.of(newProductOnCompartment))
                 .also { savedProductOnCompartmentStream = it }
         }
+
          */
 
-        if (oldProductOnCompartment != null) {
-            oldProductOnCompartment.compartment = newCompartment
-            Stream.concat(savedProductOnCompartmentStream, Stream.of(oldProductOnCompartment))
-                .also { savedProductOnCompartmentStream = it }
+
+        fun map(new: Boolean) : Pair<Compartment, ProductOnCompartment?> {
+            return if(new)
+                newCompartment to newProductOnCompartment
+            else
+                oldCompartment to oldProductOnCompartment
         }
 
-        if (newProductOnCompartment != null) {
-            newProductOnCompartment.compartment = oldCompartment
-            Stream.concat(savedProductOnCompartmentStream, Stream.of(newProductOnCompartment))
-                .also { savedProductOnCompartmentStream = it }
+        for (new in listOf(true, false)) {
+            val (_, productOnCompartment) = map(new)
+            val (otherCompartment, otherProductOnCompartment) = map(!new)
+            if (productOnCompartment != null) {
+                if (otherProductOnCompartment == null) {
+                    productOnCompartment.compartment = otherCompartment
+                } else {
+                    productOnCompartment.packageProduct = otherProductOnCompartment.packageProduct
+                    productOnCompartment.status = otherProductOnCompartment.status
+                }
+                Stream.concat(savedProductOnCompartmentStream, Stream.of(productOnCompartment))
+                    .also { savedProductOnCompartmentStream = it }
+            }
         }
 
         productOnCompartmentRepository.saveAll(Iterable{ savedProductOnCompartmentStream.iterator() })
@@ -182,6 +222,8 @@ class ShelfAtomicOpsService(
         return moveToInventory(productOnCompartment, doLogging)
     }
 
+
+    @RepeatableReadTransaction
     fun removeAll() : Observable<Unit> {
 
         return Observable.fromSingle(Observable.defer {
@@ -207,6 +249,8 @@ class ShelfAtomicOpsService(
             })
     }
 
+
+    @RepeatableReadTransaction
     fun moveToInventory(productOnCompartmentId: Long) : Pair<String?, ErrorResponse?> {
 
         val packageProductId = readonlyProductOnCompartmentRepository.findPackageProductIdById(productOnCompartmentId)
@@ -226,18 +270,22 @@ class ShelfAtomicOpsService(
         return logic.item("")
     }
 
+
+    @RepeatableReadTransaction
     fun moveToInventory(productOnCompartment: ProductOnCompartment, doLogging: Boolean = true) : Pair<String?, ErrorResponse?> {
 
-        val inventoryStock = readonlyInventoryRepository
-            .findByPackageProduct(productOnCompartment.packageProduct)
-            .let {
-                it?.apply { inventoryQuantity++ }
-                    ?: InventoryStock(productOnCompartment.packageProduct)
-            }
+        run {
+            val inventoryStock = readonlyInventoryRepository
+                .findByPackageProduct(productOnCompartment.packageProduct)
+                .let {
+                    it?.apply { inventoryQuantity++ }
+                        ?: InventoryStock(productOnCompartment.packageProduct)
+                }
 
-        inventoryRepository.save(inventoryStock)
+            inventoryRepository.save(inventoryStock)
 
-        productOnCompartmentRepository.delete(productOnCompartment)
+            productOnCompartmentRepository.delete(productOnCompartment)
+        }
 
         val message = "Removed product '${productOnCompartment.packageProduct.product.sku}' at compartment location: ${productOnCompartment.compartment.getLocation()}"
 

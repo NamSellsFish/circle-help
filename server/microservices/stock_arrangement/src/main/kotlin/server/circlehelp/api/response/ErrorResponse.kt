@@ -13,6 +13,9 @@ data class ErrorResponse(val errors: Errors, @JsonIgnore val statusCode: HttpSta
     constructor(body: String, statusCode: HttpStatus = HttpStatus.UNPROCESSABLE_ENTITY)
             : this(Collections.singleton(body), statusCode)
 
+    constructor(throwable: Throwable, statusCode: HttpStatus = HttpStatus.UNPROCESSABLE_ENTITY)
+            : this("${throwable.stackTraceToString()}", statusCode)
+
     fun addAsCopy(errorResponse: ErrorResponse?) : ErrorResponse {
 
         if (errorResponse == null) return this

@@ -40,3 +40,5 @@ out/
 .kotlin
 /src/main/kotlin/server/circlehelp/api/SecretController.kt
 /*.log*
+/src/main/kotlin/server/circlehelp/services/ShelfAtomicOpsImpl.kt
+/src/main/kotlin/server/circlehelp/services/MoveToInventoryService.kt

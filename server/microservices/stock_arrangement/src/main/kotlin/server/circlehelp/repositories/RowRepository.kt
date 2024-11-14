@@ -5,6 +5,5 @@ import org.springframework.stereotype.Repository
 import server.circlehelp.entities.Layer
 
 @Repository
-interface RowRepository : JpaRepository<Layer, Long> {
-    fun findByNumber(number: Int) : Layer?
+interface RowRepository : TransactionalJpaRepository<Layer, Long> {
 }

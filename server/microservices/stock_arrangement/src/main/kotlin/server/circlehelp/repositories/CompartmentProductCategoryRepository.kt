@@ -4,6 +4,6 @@ import org.springframework.data.jpa.repository.JpaRepository
 import server.circlehelp.entities.Compartment
 import server.circlehelp.entities.CompartmentProductCategory
 
-interface CompartmentProductCategoryRepository : JpaRepository<CompartmentProductCategory, Long> {
+interface CompartmentProductCategoryRepository : TransactionalJpaRepository<CompartmentProductCategory, Long> {
 
 }

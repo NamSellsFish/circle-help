@@ -120,9 +120,14 @@ class InventoryController(private val inventoryRepository: InventoryRepository,
                     it
             }
 
-        val pageable = PageRequest.of(page, size, Sort.by(sortColumn))
+        val sort = when(sortColumn.isBlank()) {
+            true -> Sort.unsorted()
+            false -> Sort.by(sortColumn)
+        }
 
-        val pageObj = toPage(body.toList(), page, size, Sort.by(sortColumn))
+        val pageable = PageRequest.of(page, size, sort)
+
+        val pageObj = toPage(body.toList(), page, size, sort)
 
         return ResponseEntity.ok(objectMapper.writeValueAsString(pageObj))
     }

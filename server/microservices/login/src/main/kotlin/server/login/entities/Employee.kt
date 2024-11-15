@@ -7,8 +7,9 @@ import server.login.value_classes.EncodedPassword
 @Entity
 @DiscriminatorValue(Roles.Employee)
 class Employee(username: String,
-               encodedPassword: EncodedPassword) : User(username, encodedPassword) {
+               email: String,
+               encodedPassword: EncodedPassword) : User(username, email, encodedPassword) {
 
-   override fun getRole() = Roles.Employee
+    override fun getRole() = Roles.Employee
 
 }

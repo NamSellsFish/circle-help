@@ -7,7 +7,8 @@ import server.login.value_classes.EncodedPassword
 @Entity
 @DiscriminatorValue(Roles.Admin)
 class Admin(username: String,
-               encodedPassword: EncodedPassword) : User(username, encodedPassword) {
+            email: String,
+            encodedPassword: EncodedPassword) : User(username, email, encodedPassword) {
     override fun getRole() = Roles.Admin
 
 

@@ -25,16 +25,22 @@ class AccountServiceImpl(private val passwordEncoder: InlinedPasswordEncoder,
 
     override fun registerUser(registrationDto: RegistrationDto): User {
 
-        val factory = { username: String, encodedPassword: EncodedPassword, role: String ->
+        val factory = {
+            username: String,
+            encodedPassword: EncodedPassword,
+            email: String,
+            role: String ->
             when (role) {
-                Roles.Admin -> Admin(username, encodedPassword)
-                else -> Employee(username, encodedPassword)
+                Roles.Admin -> Admin(username, email,  encodedPassword)
+                Roles.Employee -> Employee(username, email, encodedPassword)
+                else -> throw IllegalArgumentException("Role '$role' is not supported.")
             }
         }
 
         val user = factory(
             registrationDto.username,
             passwordEncoder.encode(registrationDto.password),
+            registrationDto.email,
             registrationDto.role)
 
         return accountRepository.save(user)

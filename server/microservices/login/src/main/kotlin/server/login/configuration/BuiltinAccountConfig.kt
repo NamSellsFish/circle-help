@@ -16,9 +16,9 @@ class BuiltinAccountConfig(
     init {
         if (accountRepository.count().toInt() == 0) {
             accountService.registerUser(
-                RegistrationDto("admin", Password("admin"), Roles.Admin))
+                RegistrationDto("root@admin.com","admin", Password("admin"), Roles.Admin))
             accountService.registerUser(
-                RegistrationDto("employee", Password("employee"), Roles.Employee))
+                RegistrationDto("employee@email.com", "employee", Password("employee"), Roles.Employee))
         }
     }
 }

@@ -2,6 +2,12 @@ package server.circlehelp.api
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import org.slf4j.LoggerFactory
+import org.springframework.data.domain.Page
+import org.springframework.data.domain.PageImpl
+import org.springframework.data.domain.PageRequest
+import org.springframework.data.domain.Pageable
+import org.springframework.data.domain.Sort
+import org.springframework.data.web.PagedModel
 import org.springframework.http.ResponseEntity
 import org.springframework.http.converter.json.Jackson2ObjectMapperBuilder
 import org.springframework.stereotype.Controller
@@ -16,6 +22,7 @@ import server.circlehelp.repositories.readonly.ReadonlyProductCategorizationRepo
 import server.circlehelp.services.Logic
 import java.math.BigDecimal
 import java.util.Comparator
+import kotlin.math.min
 
 const val inventory = "/inventory"
 @Controller
@@ -39,7 +46,9 @@ class InventoryController(private val inventoryRepository: InventoryRepository,
                      @RequestParam(defaultValue = "0") minPrice: BigDecimal,
                      @RequestParam(defaultValue = Integer.MAX_VALUE.toString()) maxPrice: BigDecimal,
                      @RequestParam(defaultValue = "") sortColumn: String,
-                     @RequestParam(defaultValue = "") sortOption: String): ResponseEntity<String> {
+                     @RequestParam(defaultValue = "") sortOption: String,
+                     @RequestParam(defaultValue = "0") page: Int,
+                     @RequestParam(defaultValue = Integer.MAX_VALUE.toString()) size: Int): ResponseEntity<String> {
 
         val inventoryStock = inventoryRepository
             .findAll()
@@ -111,6 +120,25 @@ class InventoryController(private val inventoryRepository: InventoryRepository,
                     it
             }
 
-        return ResponseEntity.ok(objectMapper.writeValueAsString(body))
+        val pageable = PageRequest.of(page, size, Sort.by(sortColumn))
+
+        val pageObj = toPage(body.toList(), page, size, Sort.by(sortColumn))
+
+        return ResponseEntity.ok(objectMapper.writeValueAsString(pageObj))
+    }
+
+    private fun <T> toPage(list: List<T>, pageNo: Int, size: Int, sort: Sort) : PagedModel<T> {
+        val pageable = PageRequest.of(min(pageNo, list.size), min(size, list.size), sort)
+
+        return PagedModel(
+            PageImpl(
+                list.subList(
+                    min(pageable.offset.toInt(), list.size),
+                    min(pageable.offset.toInt() + pageable.pageSize, list.size)
+                ),
+                pageable,
+                list.size.toLong()
+            )
+        )
     }
 }

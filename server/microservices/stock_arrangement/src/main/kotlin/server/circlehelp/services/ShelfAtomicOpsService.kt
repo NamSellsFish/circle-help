@@ -66,53 +66,44 @@ class ShelfAtomicOpsService(
                     doLogging: Boolean = true) : Pair<String?, ErrorResponse?> {
         return callerService.call {
             proxy.moveToInventory(compartment, doLogging = false)
-            proxy.moveToShelfImpl(inventoryStock, compartment, displace, allowExpiring, doLogging)
-        }
-    }
-
-    @RepeatableReadTransaction
-    fun moveToShelfImpl(inventoryStock: InventoryStock,
-                    compartment: Compartment,
-                    displace: Boolean = true,
-                    allowExpiring: Boolean = false,
-                    doLogging: Boolean = true) : Pair<String?, ErrorResponse?> {
-
-        if (logic.isExpiring(inventoryStock.packageProduct) && allowExpiring.complement()) {
-            logger.info("Blocked attempt to move expired product to shelf: " + objectMapper.writeValueAsString(inventoryStock))
-            return logic.error(
-                logic.expiredProductArrangementAttemptResponse(inventoryStock.packageProduct))
-        }
-
-        run {
-
-            if (inventoryStock.inventoryQuantity == 1) {
-                inventoryRepository.delete(inventoryStock)
-            } else {
-                inventoryStock.inventoryQuantity--
-                inventoryRepository.save(inventoryStock)
+            if (logic.isExpiring(inventoryStock.packageProduct) && allowExpiring.complement()) {
+                logger.info("Blocked attempt to move expired product to shelf: " + objectMapper.writeValueAsString(inventoryStock))
+                logic.error<String>(
+                    logic.expiredProductArrangementAttemptResponse(inventoryStock.packageProduct))
             }
 
-            val productOnCompartment =
-                readonlyProductOnCompartmentRepository.findByCompartment(compartment)
+            run {
 
-            val newProductOnCompartment = productOnCompartment?.apply {
-                packageProduct = inventoryStock.packageProduct
-            } ?:
-            ProductOnCompartment(
-                compartment,
-                inventoryStock.packageProduct
-            )
+                if (inventoryStock.inventoryQuantity == 1) {
+                    inventoryRepository.delete(inventoryStock)
+                } else {
+                    inventoryStock.inventoryQuantity--
+                    inventoryRepository.save(inventoryStock)
+                }
 
-            productOnCompartmentRepository.save(newProductOnCompartment)
+                val productOnCompartment =
+                    readonlyProductOnCompartmentRepository.findByCompartment(compartment)
+
+                val newProductOnCompartment = productOnCompartment?.apply {
+                    packageProduct = inventoryStock.packageProduct
+                } ?:
+                ProductOnCompartment(
+                    compartment,
+                    inventoryStock.packageProduct
+                )
+
+                productOnCompartmentRepository.save(newProductOnCompartment)
+            }
+
+            val message = "Moved product '${inventoryStock.packageProduct.product.sku}' to compartment: ${compartment.getLocation()}"
+
+            if (doLogging)
+                logger.info(message)
+
+            logic.item(message)
         }
-
-        val message = "Moved product '${inventoryStock.packageProduct.product.sku}' to compartment: ${compartment.getLocation()}"
-
-        if (doLogging)
-            logger.info(message)
-
-        return logic.item(message)
     }
+
 
     /*
     private fun moveToShelf(id: Long, location: CompartmentPosition) : ResponseEntity<String> {

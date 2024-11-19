@@ -7,16 +7,13 @@ import com.fasterxml.jackson.module.kotlin.readValue
 import io.reactivex.rxjava3.core.Observable
 import io.reactivex.rxjava3.core.Scheduler
 import io.reactivex.rxjava3.core.Single
-import io.reactivex.rxjava3.kotlin.zipWith
 import io.reactivex.rxjava3.schedulers.Schedulers
 import jakarta.persistence.EntityManager
-import jakarta.transaction.InvalidTransactionException
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Qualifier
 import org.springframework.http.HttpStatus
 import org.springframework.http.converter.json.Jackson2ObjectMapperBuilder
 import org.springframework.stereotype.Service
-import org.springframework.web.bind.annotation.RequestParam
 import server.circlehelp.annotations.RepeatableReadTransaction
 import server.circlehelp.api.complement
 import server.circlehelp.api.request.PackageProductItem
@@ -33,22 +30,23 @@ import server.circlehelp.api.response.SwapRequest
 import server.circlehelp.configuration.BeanQualifiers
 import server.circlehelp.entities.Compartment
 import server.circlehelp.entities.InventoryStock
+import server.circlehelp.entities.PackageProduct
 import server.circlehelp.entities.Product
-import server.circlehelp.entities.ProductOnCompartment
-import server.circlehelp.repositories.EventCompartmentRepository
-import server.circlehelp.repositories.FrontCompartmentRepository
 import server.circlehelp.repositories.InventoryRepository
 import server.circlehelp.repositories.ProductOnCompartmentRepository
 import server.circlehelp.repositories.ProductRepository
 import server.circlehelp.repositories.readonly.ReadonlyArrivedPackageRepository
 import server.circlehelp.repositories.readonly.ReadonlyCompartmentProductCategoryRepository
 import server.circlehelp.repositories.readonly.ReadonlyCompartmentRepository
+import server.circlehelp.repositories.readonly.ReadonlyEventCompartmentRepository
 import server.circlehelp.repositories.readonly.ReadonlyEventProductRepository
+import server.circlehelp.repositories.readonly.ReadonlyFrontCompartmentRepository
 import server.circlehelp.repositories.readonly.ReadonlyInventoryRepository
 import server.circlehelp.repositories.readonly.ReadonlyPackageProductRepository
 import server.circlehelp.repositories.readonly.ReadonlyProductCategorizationRepository
 import server.circlehelp.repositories.readonly.ReadonlyProductOnCompartmentRepository
 import server.circlehelp.repositories.readonly.ReadonlyRowRepository
+import java.util.HashMap
 import java.util.LinkedList
 import kotlin.jvm.Throws
 import kotlin.jvm.optionals.getOrNull
@@ -62,8 +60,8 @@ class ShelfService(
     private val readonlyRowRepository: ReadonlyRowRepository,
     private val readonlyCompartmentRepository: ReadonlyCompartmentRepository,
     private val readonlyPackageProductRepository: ReadonlyPackageProductRepository,
-    private val frontCompartmentRepository: FrontCompartmentRepository,
-    private val eventCompartmentRepository: EventCompartmentRepository,
+    private val readonlyFrontCompartmentRepository: ReadonlyFrontCompartmentRepository,
+    private val readonlyEventCompartmentRepository: ReadonlyEventCompartmentRepository,
     private val readonlyCompartmentProductCategoryRepository: ReadonlyCompartmentProductCategoryRepository,
     private val readonlyProductCategorizationRepository: ReadonlyProductCategorizationRepository,
     private val readonlyArrivedPackageRepository: ReadonlyArrivedPackageRepository,
@@ -77,9 +75,6 @@ class ShelfService(
     private val logic: Logic,
     private val shelfAtomicOpsService: ShelfAtomicOpsService,
     private val blocs: Blocs,
-
-
-
 
     @Qualifier(BeanQualifiers.computationScheduler) private val computationScheduler: Scheduler,
     @Qualifier(BeanQualifiers.sameThreadScheduler) private val sameThreadScheduler: Scheduler,
@@ -251,27 +246,46 @@ class ShelfService(
      *
      */
     fun autoMove(slowSellCheck: Boolean = false,
-                 event: Boolean = false) : String {
+                 event: Boolean = false,
+                 autoMove: Boolean = true) : String {
 
-        return autoMoveImpl(slowSellCheck, event)
+        return autoMoveImpl(slowSellCheck, event, autoMove)
     }
 
     private fun autoMoveImpl(slowSellCheck: Boolean,
-                             event: Boolean) : String {
+                             event: Boolean,
+                             autoMove: Boolean) : String {
 
         val compartmentsToFill = HashSet<Compartment>()
-        val frontCompartments = LinkedList(frontCompartmentRepository.findAll().map { it.compartment })
+        val frontCompartments = readonlyFrontCompartmentRepository
+            .findAll().map { it.compartment }
 
-        if (slowSellCheck)
+        val slowSelling = HashMap<PackageProduct, InventoryStock>()
+
+        if (slowSellCheck) {
             for (productOnCompartment in readonlyProductOnCompartmentRepository.findAllByStatus(3)) {
                 if (frontCompartments.isEmpty()) break
 
                 //compartmentsToFill.add(productOnCompartment.compartment)
 
-                shelfAtomicOpsService.swapStockPlacement(frontCompartments[0], productOnCompartment.compartment)
+                //shelfAtomicOpsService.swapStockPlacement(frontCompartments[0], productOnCompartment.compartment)
 
-                frontCompartments.removeFirst()
+                val packageProduct = productOnCompartment.packageProduct
+
+                slowSelling[packageProduct] =
+                    (slowSelling[packageProduct]
+                        ?: InventoryStock(packageProduct))
+                        .apply { inventoryQuantity++ }
+
+                shelfAtomicOpsService.moveToInventory(productOnCompartment)
             }
+
+            partitionProducts(
+                slowSelling.values.toList().sortedBy { it.inventoryQuantity } ,
+                frontCompartments,
+                updateFunc =  { listOf() }
+            )
+        }
 
         for (productOnCompartment in readonlyProductOnCompartmentRepository
             .findAllByOrderByCompartmentNumberAscCompartmentLayerNumberAsc()) {
@@ -281,16 +295,21 @@ class ShelfService(
             }
         }
 
-        if (event)
-            continuousArrangement(
-                LinkedList(
-                    logic.activeEventProducts().map { it.product }
-                ),
-                eventCompartmentRepository.findAll().map { it.compartment }
+        if (event) {
+            val eventProductSet = logic.activeEventProducts().map { it.product }.toHashSet()
+            partitionProducts(
+                readonlyInventoryRepository.findAllByOrderByPackageProductExpirationDateDesc().filter {
+                    eventProductSet.contains(it.packageProduct.product)
+                }.sortedBy { it.inventoryQuantity },
+                readonlyEventCompartmentRepository.findAll().map { it.compartment },
+                updateFunc = { listOf() }
             )
+        }
+
+        if (autoMove.not()) return ""
 
         if (true) compartmentsToFill.addAll(readonlyCompartmentRepository
-            .findAll()
+            .findAllByOrderByNumberAscLayerNumberAsc()
             .filter { readonlyProductOnCompartmentRepository.existsByCompartment(it).complement() })
 
         for (order in readonlyArrivedPackageRepository.findAllByOrderByDateDescIdDesc()) {
@@ -435,22 +454,29 @@ class ShelfService(
             //println("counterMapKeys: ${counterMap.keys.joinToString()}")
             //println("compartmentGroupsKey: ${compartmentGroups.keys.joinToString()}")
 
-            var inventoryStockCounts = inventoryStocks
+            var inventoryStockCounts = inventoryStocks.keys.toList().sortedBy { it.inventoryQuantity }
 
             for ((key, collection) in compartmentGroups) {
                 logger.info("KEY: $key")
                 if (counterMap.containsKey(key)) {
-                    val count = partitionProducts(inventoryStockCounts.filterKeys {
+                    val count = partitionProducts(inventoryStockCounts.filter {
                         key == "*" ||
                                 productCategorySets[it]!!.contains(key)
-                    }, collection).blockingGet()
-                    logger.info("Moved count: $count/${collection.size}")
+                    },
+                    collection,
+                    updateFunc =
+                    {  it.mapNotNull {
+                        readonlyInventoryRepository.findById(it.id!!)
+                            .getOrNull()
+                        }
+                    }
+                    ).blockingGet()
+                    logger.info("$key moved count: $count/${collection.size}")
                 }
 
-                inventoryStockCounts = inventoryStockCounts.mapValues {
-                    readonlyInventoryRepository.findById(it.key.id!!).getOrNull()?.inventoryQuantity
-                        ?: 0
-                }.filterValues { it != 0 }
+                inventoryStockCounts = inventoryStockCounts.mapNotNull {
+                    readonlyInventoryRepository.findById(it.id!!).getOrNull()
+                }.sortedBy { it.inventoryQuantity }
             }
 
             /*
@@ -491,11 +517,12 @@ class ShelfService(
                 .toList().toSet())
 
             if (compartmentsToFill.isEmpty()) break
+
+            shelfAtomicOpsService.compartments.clear()
         }
 
         return ""
     }
-
 
     private fun partitionProductCounts(stocks: Map<InventoryStock, Int>,
                                        compartmentCount: Int,
@@ -531,59 +558,63 @@ class ShelfService(
         return partitionProductCounts(stocks.filter { it.value != newMap[it.key] }, counter, newMap)
     }
 
-    private fun partitionProducts(stocks: Map<InventoryStock, Int>, compartments: List<Compartment>) : Single<Long> {
+    /**
+     * TODO: Algorithm may complete after all products have been processed. [updateFunc] may no longer be necessary.
+     */
+    private fun partitionProducts(stocks: List<InventoryStock>,
+                                  compartments: List<Compartment>,
+                                  entries: List<InventoryStock> = stocks,
+                                  updateFunc: (List<InventoryStock>) -> List<InventoryStock>) : Single<Int> {
 
-        if (stocks.isEmpty()) return Observable.just(0L).lastOrError()
+        if (entries.isEmpty()) return Observable.just(0).lastOrError()
+
+        val entry = entries.first()
 
         // Fixed: Possible error when size = 1 and stocks.size > 1
-        val partitionLimit = (compartments.size / stocks.size).coerceAtLeast(1)
+        val partitionLimit = Math.ceilDiv(compartments.size, entries.size)
 
+        /*
         logger.info("Compartments:")
         compartments.forEach{logger.info(it.getLocation().toString())}
 
         logger.info("Remaining: ${compartments.size}")
         logger.info("Partition Limit: $partitionLimit")
+        logger.info("Product: ${entry.packageProduct.product.sku}")
+        logger.info("Quantity: ${entry.inventoryQuantity}")
+        */
 
-        return Observable.defer {
-            Observable.fromIterable(stocks.entries)
-                .concatMap({(inventoryStock, count) ->
-                    logger.info("${inventoryStock.packageProduct.product.sku}:${count}")
-                    Observable.just(inventoryStock).repeat(count.coerceAtMost(partitionLimit).toLong())
-                }, 2)
-                .zipWith(Observable.fromIterable(0..Int.MAX_VALUE))
-                .takeWhile { (_, index) -> index < compartments.size }
-                .map { (inventoryStock, index) ->
-                    logger.info("Index: $index")
-                    logger.info("Compartment: ${compartments[index].getLocation()}")
-                    try {
-                        shelfAtomicOpsService.moveToShelf(
-                            inventoryStock,
-                            compartments[index],
-                            displace = false
-                        )
-                    } catch (ex: InvalidTransactionException) {
-                        throw ErrorResponseException(ErrorResponse(), throwable = ex)
-                    }
-                }
-        }
-            .observeOn(sameThreadScheduler)
-            .count()
+        return Observable.just(entry)
+
             .map {
 
+                val filledCompartments = compartments.subList(0, it.inventoryQuantity.coerceAtMost(partitionLimit))
+                shelfAtomicOpsService.moveToShelf(it, filledCompartments)
+                filledCompartments.size
+            }
+            .map {
+                logger.info("Current moved count: $it")
+
+                var nextEntries = entries.subList(1, entries.size)
+
+                val newStocks = stocks.let {
+                    if (nextEntries.isEmpty()) {
+                        val result = updateFunc(it)
+                        nextEntries = result
+                        result
+                    }
+                    else
+                        it
+                }
                 if (it < compartments.size)
                     partitionProducts(
-                        stocks
-                            .mapValues { readonlyInventoryRepository
-                                .findById(it.key.id!!)
-                                .getOrNull()
-                                ?.inventoryQuantity
-                                ?: 0}
-                            .filterValues { it > 0 },
-                        compartments.subList(it.toInt(), compartments.size)
+                        newStocks,
+                        compartments.subList(it, compartments.size),
+                        nextEntries,
+                        updateFunc
                     ).blockingGet() + it
                 else
                     it
-            }
+            }.lastOrError()
     }
 
     @Throws(ErrorResponseException::class)
@@ -774,7 +805,7 @@ class ShelfService(
 
     fun arrangeEventStocks(productList: ProductList) : String {
 
-        return validateAndArrangeProductList(productList, eventCompartmentRepository.findAll().map { it.compartment })
+        return validateAndArrangeProductList(productList, readonlyEventCompartmentRepository.findAll().map { it.compartment })
     }
 
     fun removeExpired() {
@@ -801,6 +832,30 @@ class ShelfService(
         shelfAtomicOpsService.removeAll().blockingSubscribe()
     }
 
+    fun printCompartmentsOrAll(rowNumber: Int?) : String {
+        return if (rowNumber == null)
+            printCompartments()
+        else
+            printCompartments(rowNumber)
+    }
+
+    fun printCompartmentsCategoryOrAll(rowNumber: Int?) : String {
+        return if (rowNumber == null)
+            printCompartmentCategories()
+        else
+            printCompartmentsCategory(rowNumber)
+    }
+
+    fun printCompartments() : String {
+        return readonlyRowRepository.findAll()
+            .joinToString("\n\n") { "Row ${it.number}:\n" + printCompartments(it.number) }
+    }
+
+    fun printCompartmentCategories() : String {
+        return readonlyRowRepository.findAll()
+            .joinToString("\n\n") { "Row ${it.number}:\n" + printCompartmentsCategory(it.number) }
+    }
+
     @RepeatableReadTransaction(readOnly = true)
     @Throws(ErrorResponseException::class)
     fun printCompartments(rowNumber: Int) : String {
@@ -808,22 +863,25 @@ class ShelfService(
         val layer = readonlyRowRepository.findByNumber(rowNumber)
             ?: throw ErrorResponseException(logic.rowNotFoundResponse(rowNumber))
 
+        val emptyText = "______(_)"
+
         val message = blocs.printMap({
 
             val compartment = readonlyCompartmentRepository.findByLayerAndNumber(layer, it)
 
             compartment?.let {
-                readonlyProductOnCompartmentRepository.findByCompartment(it)
-                    ?.packageProduct?.product?.sku
-            }?: "______"
-        }, "      ")
+                val productOnCompartment = readonlyProductOnCompartmentRepository.findByCompartment(it)
+                productOnCompartment?.packageProduct?.product?.sku
+                    ?.plus("(${productOnCompartment.status})")
+            }?: emptyText
+        }, " ".repeat(emptyText.length))
 
         return message
     }
 
     @RepeatableReadTransaction(readOnly = true)
     @Throws(ErrorResponseException::class)
-    fun printCompartmentsCategory(@RequestParam(value = "row") rowNumber: Int) : String {
+    fun printCompartmentsCategory(rowNumber: Int) : String {
 
         val layer = readonlyRowRepository.findByNumber(rowNumber)
             ?: throw ErrorResponseException(logic.rowNotFoundResponse(rowNumber))

@@ -3,6 +3,7 @@ package server.circlehelp.api
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.ObjectMapper
 import org.slf4j.LoggerFactory
+import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
 import org.springframework.http.converter.json.Jackson2ObjectMapperBuilder
 import org.springframework.web.bind.annotation.GetMapping
@@ -11,50 +12,49 @@ import org.springframework.web.bind.annotation.PutMapping
 import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RequestParam
+import org.springframework.web.bind.annotation.ResponseBody
+import org.springframework.web.bind.annotation.ResponseStatus
 import org.springframework.web.bind.annotation.RestController
 import server.circlehelp.api.response.CompartmentPosition
 import server.circlehelp.api.response.MoveProductToShelfRequest
+import server.circlehelp.api.response.ProductDetails
 import server.circlehelp.api.response.ProductID
 import server.circlehelp.api.response.ProductList
+import server.circlehelp.api.response.ProductOnCompartmentDto
 import server.circlehelp.api.response.SwapRequest
 import server.circlehelp.services.ResponseBodyWriter
 import server.circlehelp.services.ShelfService
+import java.util.Optional
+import kotlin.jvm.optionals.getOrNull
 
 const val shelf = "/shelves"
 
 @RestController
 @RequestMapping("$baseURL$shelf")
+@ResponseStatus(HttpStatus.OK)
 class ShelvesController(
     mapperBuilder: Jackson2ObjectMapperBuilder,
-    private val shelfService: ShelfService,
-    private val responseBodyWriter: ResponseBodyWriter
+    private val shelfService: ShelfService
 ) {
     private val objectMapper = mapperBuilder.build<ObjectMapper>()
     private val logger = LoggerFactory.getLogger(ShelvesController::class.java)
-
 
     @GetMapping("/getOne")
     fun getStock(
         @RequestParam(value = "row") rowNumber: Int,
         @RequestParam(value = "compartment") compartmentNumber: Int
-    ): ResponseEntity<String> {
-        return responseBodyWriter.wrap {
-            shelfService.getStock(rowNumber, compartmentNumber)
-        }
+    ): ProductDetails? {
+        return shelfService.getStock(rowNumber, compartmentNumber)
     }
 
     @GetMapping("/get")
-    fun getStocks(@RequestParam(value = "row") rowNumber: Int): ResponseEntity<String> {
-        return responseBodyWriter.wrap {
-            shelfService.getStocks(rowNumber)
-        }
+    fun getStocks(@RequestParam(value = "row") rowNumber: Int): List<ProductOnCompartmentDto> {
+        return shelfService.getStocks(rowNumber)
     }
 
     @PostMapping("/autoMove_")
-    fun autoMove(@RequestBody productID: ProductID): ResponseEntity<String> {
-        return responseBodyWriter.wrap {
-            shelfService.autoMove1(productID)
-        }
+    fun autoMove(@RequestBody productID: ProductID): String {
+        return  shelfService.autoMove1(productID)
     }
 
     /**
@@ -89,56 +89,44 @@ class ShelvesController(
     @PostMapping("/autoMove")
     fun autoMoveMapping(
         @RequestParam(defaultValue = "False") slowSellCheck: Boolean,
-        @RequestParam(defaultValue = "False") event: Boolean
-    ): ResponseEntity<String> {
-        return responseBodyWriter.wrap {
-            shelfService.autoMove(slowSellCheck, event)
-        }
+        @RequestParam(defaultValue = "False") event: Boolean,
+        @RequestParam(defaultValue = "True") autoMove: Boolean,
+    ): String {
+        return    shelfService.autoMove(slowSellCheck, event, autoMove)
+        
     }
 
     @PostMapping("/manualMove")
-    fun move(@RequestBody body: JsonNode): ResponseEntity<String> {
-        return responseBodyWriter.wrap {
-            shelfService.move(body)
-        }
+    fun move(@RequestBody body: JsonNode): String {
+        return shelfService.move(body)
     }
 
 
     @PutMapping("/manualMove_")
-    fun moveToShelf(@RequestBody body: MoveProductToShelfRequest): ResponseEntity<String> {
-        return responseBodyWriter.wrap {
-            shelfService.moveToShelf(body)
-        }
+    fun moveToShelf(@RequestBody body: MoveProductToShelfRequest): String {
+        return shelfService.moveToShelf(body)
     }
 
 
     @PostMapping("/swap")
-    fun swap(@RequestBody body: Iterable<SwapRequest>): ResponseEntity<String> {
-        return responseBodyWriter.wrap {
-            shelfService.swap(body)
-        }
+    fun swap(@RequestBody body: Iterable<SwapRequest>): String {
+        return shelfService.swap(body)
     }
 
     @PutMapping("/moveToInventory")
-    fun remove(@RequestBody body: Iterable<CompartmentPosition>): ResponseEntity<String> {
-        return responseBodyWriter.wrap {
-            shelfService.remove(body)
-        }
+    fun remove(@RequestBody body: Iterable<CompartmentPosition>): String {
+        return shelfService.remove(body)
     }
 
 
     @PostMapping("/arrangeToFront")
-    fun arrangeToFront(@RequestBody productList: ProductList): ResponseEntity<String> {
-        return responseBodyWriter.wrap {
-            productList
-        }
+    fun arrangeToFront(@RequestBody productList: ProductList): ProductList {
+        return productList
     }
 
     @PostMapping("/arrangeEventStocks")
-    fun arrangeEventStocks(@RequestBody productList: ProductList): ResponseEntity<String> {
-        return responseBodyWriter.wrap {
-            shelfService.arrangeEventStocks(productList)
-        }
+    fun arrangeEventStocks(@RequestBody productList: ProductList): String {
+        return shelfService.arrangeEventStocks(productList)
     }
 
     @PutMapping("/removeExpired")
@@ -152,17 +140,15 @@ class ShelvesController(
     }
 
     @GetMapping("/print")
-    fun printCompartments(@RequestParam(value = "row") rowNumber: Int): ResponseEntity<String> {
-        return responseBodyWriter.wrap {
-            shelfService.printCompartments(rowNumber)
-        }
+    fun printCompartments(@RequestParam(value = "row")
+                          rowNumber: Int?): String {
+        return shelfService.printCompartmentsOrAll(rowNumber)
     }
 
     @GetMapping("/printCategory")
-    fun printCompartmentsCategory(@RequestParam(value = "row") rowNumber: Int): ResponseEntity<String> {
-        return responseBodyWriter.wrap {
-            shelfService.printCompartmentsCategory(rowNumber)
-        }
+    fun printCompartmentsCategory(@RequestParam(value = "row")
+                                  rowNumber: Int?): String {
+        return shelfService.printCompartmentsCategoryOrAll(rowNumber)
     }
 
 }

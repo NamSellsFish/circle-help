@@ -89,6 +89,10 @@ class Logic(private val readonlyRowRepository: ReadonlyRowRepository,
         return ErrorResponse("Product not found in inventory: $sku")
     }
 
+    fun notEnoughInInventoryResponse(sku: String, orderID: Long) : ErrorResponse {
+        return ErrorResponse("Not enough of '$sku' of order $orderID in inventory.")
+    }
+
     @RepeatableReadTransaction(readOnly = true)
     fun activeEventProducts() : List<EventProduct> {
         return readonlyEventProductRepository.findAll().filter {

@@ -25,4 +25,5 @@ class InventoryStock(
 
     @Id @GeneratedValue override var id: Long? = null
 ) : IdObjectBase<Long>()  {
+
 }

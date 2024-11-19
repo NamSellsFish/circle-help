@@ -69,6 +69,13 @@ class SampleDataConfiguration(
 
     private val logic: Logic,
 ) {
+
+    private data class StockInfo(
+        val arrivedDateTime: LocalDateTime = LocalDateTime.of(2024, 4, 1, 1, 1),
+        val expirationDate: LocalDate = LocalDate.of(2025, 4, 1),
+        val quantity: Int = 200
+    )
+
     init {
         run {
             if (productRepository.count() > 0) return@run
@@ -93,6 +100,30 @@ class SampleDataConfiguration(
         //lunchablesProduct()
         //lunchablesDelivery()
         //eventProduct()
+
+        // Add several package products.
+        run {
+            return@run
+            val stockInfos = listOf(
+                StockInfo(
+                    arrivedDateTime = LocalDateTime.of(2023, 4, 1, 12, 0),
+                    expirationDate = LocalDate.of(2024, 12, 12),
+                    quantity = 20
+                ),
+                StockInfo(
+                    arrivedDateTime = LocalDateTime.of(2024, 9, 9, 9, 0),
+                    expirationDate = LocalDate.of(2025, 4, 1),
+                    quantity = 10
+                ),
+                StockInfo(
+                    arrivedDateTime = LocalDateTime.of(2024, 10, 1, 10, 0),
+                    expirationDate = LocalDate.of(2025, 10, 1),
+                    quantity = 30
+                )
+            )
+
+            stockInfos.forEach { addStock(it.arrivedDateTime, it.expirationDate, it.quantity) }
+        }
     }
 
     @Deprecated("Use 'compartmentNumberingByShelf'")
@@ -319,8 +350,8 @@ class SampleDataConfiguration(
 
         val products = productRepository.findAll()
 
-        val packageProduct1 = PackageProduct(arrivedPackage, products[0], 10, BigDecimal(15), expirationDate)
-        val packageProduct2 = PackageProduct(arrivedPackage, products[1], 15, BigDecimal(8), expirationDate)
+        val packageProduct1 = PackageProduct(arrivedPackage, products[0], 10, BigDecimal(8), expirationDate)
+        val packageProduct2 = PackageProduct(arrivedPackage, products[1], 15, BigDecimal(15), expirationDate)
 
         packageProductRepository.save(packageProduct1)
         packageProductRepository.save(packageProduct2)
@@ -394,9 +425,12 @@ class SampleDataConfiguration(
         eventProductRepository.save(eventProduct2)
     }
 
-    private fun addStock() {
-        val arrivedPackage = ArrivedPackage(LocalDateTime.of(2024, 4, 1, 1, 1), "Gehirn")
-        val expirationDate = LocalDate.of(2025, 4, 1)
+    private fun addStock(
+        arrivedDateTime: LocalDateTime = LocalDateTime.of(2024, 4, 1, 1, 1),
+        expirationDate: LocalDate = LocalDate.of(2025, 4, 1),
+        quantity: Int = 200
+    ) {
+        val arrivedPackage = ArrivedPackage(arrivedDateTime, "Gehirn")
 
         arrivedPackageRepository.save(arrivedPackage)
 
@@ -405,8 +439,6 @@ class SampleDataConfiguration(
         val ration = productRepository.findById("DK000O").get()
         val waterBottle = productRepository.findById("FD000O").get()
         val rainCoat = productRepository.findById("WP000O").get()
-
-        val quantity = 200
 
         val packageProduct1 = PackageProduct(arrivedPackage, ration, quantity, BigDecimal(15), expirationDate)
         val packageProduct2 = PackageProduct(arrivedPackage, waterBottle, quantity, BigDecimal(8), expirationDate)
@@ -422,5 +454,4 @@ class SampleDataConfiguration(
         invs(InventoryStock(packageProduct2, quantity))
         invs(InventoryStock(packageProduct3, quantity))
     }
-
 }

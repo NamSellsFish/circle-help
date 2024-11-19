@@ -20,7 +20,7 @@ class ProductOnCompartment(
 
     @NotNull @Min(0)
     @Column(nullable = false)
-    var status: Int = 0,
+    var status: Int = 1,
 
     @Id @GeneratedValue override var id: Long? = null
 ) : IdObjectBase<Long>() {

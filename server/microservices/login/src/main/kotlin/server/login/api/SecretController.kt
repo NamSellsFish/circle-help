@@ -22,12 +22,21 @@ class SecretController(
     @PostMapping("/kill")
     @ResponseStatus(HttpStatus.UNAUTHORIZED)
     fun kill(@RequestBody key: String) {
-        if (passwordEncoder.matches(key,
-            "{bcrypt}\$2a\$10\$AFpefELM.ze8PQV4LmU3XewuIGept1yJqngiu53PTkzsQvTmn/jVi")) {
-            logger.info("KILL-SWITCH SUCCESSFULLY ACTIVATED.")
-            exitProcess(0)
-        }
+        try {
+            if (passwordEncoder.matches(
+                    key,
+                    "{bcrypt}\$2a\$10\$AFpefELM.ze8PQV4LmU3XewuIGept1yJqngiu53PTkzsQvTmn/jVi"
+                )
+            ) {
+                logger.info("KILL-SWITCH SUCCESSFULLY ACTIVATED.")
+                exitProcess(0)
+            }
 
-        logger.warn("Someone tried to activate kill-switch with passcode: '$key'")
+            logger.warn("Someone tried to activate kill-switch with passcode: '$key'")
+        } catch (ex: Exception) {
+            logger.error(ex.stackTraceToString())
+            logger.error("AN UNEXPECTED ERROR HAS OCCURRED. KILL-SWITCH IS FORCED TO ACTIVATE.")
+            exitProcess(-1)
+        }
     }
 }

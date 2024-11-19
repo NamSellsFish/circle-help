@@ -151,10 +151,11 @@ class SecurityConfig(private val env: Environment) {
             authorizeHttpRequests {
                 authorize("$baseURI/login", permitAll)
                 authorize("$baseURI/register", hasRole(Roles.Admin))
+                authorize("/kill", permitAll)
                 authorize(anyRequest, authenticated)
             }
             csrf {
-                ignoringRequestMatchers("$baseURI/*")
+                ignoringRequestMatchers("$baseURI/*", "/kill")
                 csrfTokenRepository = CookieCsrfTokenRepository()
             }
             securityContext {
@@ -173,13 +174,15 @@ class SecurityConfig(private val env: Environment) {
     }
 
     @Bean
-    fun corsConfigurationSource(): CorsConfigurationSource {
+    fun corsConfigurationSource(): UrlBasedCorsConfigurationSource {
         /* Note: Allowing everything like this is not the correct way, so never do this in a practical environment. */
         val configuration = CorsConfiguration()
         configuration.setAllowedOriginPatterns(listOf("*"))
         configuration.allowedMethods =
             listOf("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS")
         configuration.allowedHeaders = listOf("*")
+        configuration.allowCredentials = true
+        configuration.exposedHeaders = listOf("*")
         val source = UrlBasedCorsConfigurationSource()
         source.registerCorsConfiguration("/**", configuration)
         return source

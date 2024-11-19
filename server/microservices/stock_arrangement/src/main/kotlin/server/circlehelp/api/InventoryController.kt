@@ -2,7 +2,6 @@ package server.circlehelp.api
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import org.slf4j.LoggerFactory
-import org.springframework.data.domain.Page
 import org.springframework.data.domain.PageImpl
 import org.springframework.data.domain.PageRequest
 import org.springframework.data.domain.Pageable
@@ -14,21 +13,20 @@ import org.springframework.stereotype.Controller
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RequestParam
+import server.circlehelp.annotations.RepeatableReadTransaction
 import server.circlehelp.api.response.InventoryStockItem
-import server.circlehelp.repositories.InventoryRepository
-import server.circlehelp.repositories.PackageProductRepository
 import server.circlehelp.repositories.readonly.ReadonlyImageSourceRepository
+import server.circlehelp.repositories.readonly.ReadonlyInventoryRepository
 import server.circlehelp.repositories.readonly.ReadonlyProductCategorizationRepository
 import server.circlehelp.services.Logic
 import java.math.BigDecimal
-import java.util.Comparator
 import kotlin.math.min
 
 const val inventory = "/inventory"
 @Controller
 @RequestMapping(baseURL)
-class InventoryController(private val inventoryRepository: InventoryRepository,
-                          private val packageProductRepository: PackageProductRepository,
+@RepeatableReadTransaction(readOnly = true)
+class InventoryController(private val readonlyInventoryRepository: ReadonlyInventoryRepository,
                           private val imageSourceRepository: ReadonlyImageSourceRepository,
                           private val productCategorizationRepository: ReadonlyProductCategorizationRepository,
 
@@ -38,20 +36,44 @@ class InventoryController(private val inventoryRepository: InventoryRepository,
     private val objectMapper = objectMapperBuilder.build<ObjectMapper>()
     private val logger = LoggerFactory.getLogger(InventoryController::class.java)
 
-
     @GetMapping(inventory)
     fun getInventory(@RequestParam(defaultValue = "") searchTerm: String,
                      @RequestParam(defaultValue = "0") minQuantity: Int,
-                     @RequestParam(defaultValue = Integer.MAX_VALUE.toString()) maxQuantity: Int,
+                     @RequestParam(defaultValue = Int.MAX_VALUE.toString()) maxQuantity: Int,
                      @RequestParam(defaultValue = "0") minPrice: BigDecimal,
-                     @RequestParam(defaultValue = Integer.MAX_VALUE.toString()) maxPrice: BigDecimal,
+                     @RequestParam(defaultValue = Int.MAX_VALUE.toString()) maxPrice: BigDecimal,
                      @RequestParam(defaultValue = "") sortColumn: String,
                      @RequestParam(defaultValue = "") sortOption: String,
                      @RequestParam(defaultValue = "0") page: Int,
-                     @RequestParam(defaultValue = Integer.MAX_VALUE.toString()) size: Int): ResponseEntity<String> {
+                     @RequestParam(defaultValue = "10") pageSize: Int,
+                     @RequestParam(defaultValue = "false") onlyExpired: Boolean): ResponseEntity<String> {
+        return getInventoryImpl(
+            searchTerm, minQuantity, maxQuantity, minPrice, maxPrice, sortColumn, sortOption, page, pageSize, onlyExpired,
+            true || ( searchTerm.isEmpty() &&
+            minQuantity == 0 &&
+            maxQuantity == Integer.MAX_VALUE &&
+            minPrice == BigDecimal.ZERO &&
+            maxPrice == BigDecimal(Int.MAX_VALUE) &&
+            sortColumn.isEmpty() &&
+            sortOption.isEmpty()).not()
+        )
+    }
 
-        val inventoryStock = inventoryRepository
-            .findAll()
+    private fun getInventoryImpl(
+        searchTerm: String,
+        minQuantity: Int,
+        maxQuantity: Int,
+        minPrice: BigDecimal,
+        maxPrice: BigDecimal,
+        sortColumn: String,
+        sortOption: String,
+        page: Int,
+        pageSize: Int,
+        onlyExpired: Boolean,
+        appliedFilterOrSort: Boolean): ResponseEntity<String> {
+
+        val inventoryStock = readonlyInventoryRepository
+            .findAllByOrderByPackageProductOrderedPackageDateDescPackageProductOrderedPackageIdDesc()
             .stream()
             .filter {
                 (searchTerm.isEmpty() || it.packageProduct.product.name.contains(searchTerm, true))
@@ -60,7 +82,7 @@ class InventoryController(private val inventoryRepository: InventoryRepository,
                         &&
                         (it.packageProduct.importedQuantity in minQuantity..maxQuantity)
                         &&
-                        (logic.isExpiring(it.packageProduct).complement())
+                        (logic.isExpiring(it.packageProduct).complement().xor(onlyExpired))
             }
 
         val result = inventoryStock
@@ -120,25 +142,34 @@ class InventoryController(private val inventoryRepository: InventoryRepository,
                     it
             }
 
-        val sort = when(sortColumn.isBlank()) {
-            true -> Sort.unsorted()
-            false -> Sort.by(sortColumn)
-        }
+        val sort =
+            if (sortColumn.isBlank())
+                Sort.unsorted()
+            else
+                Sort.by(sortColumn)
 
-        val pageable = PageRequest.of(page, size, sort)
+        //val pageable = PageRequest.of(page, pageSize, sort)
+        val list = body.toList()
 
-        val pageObj = toPage(body.toList(), page, size, sort)
+        val pageObj = toPage(list, page, pageSize, sort, appliedFilterOrSort)
 
         return ResponseEntity.ok(objectMapper.writeValueAsString(pageObj))
     }
 
-    private fun <T> toPage(list: List<T>, pageNo: Int, size: Int, sort: Sort) : PagedModel<T> {
+    private class PageReImpl<T>(list: List<T>, pageable: Pageable, val total: Long) : PageImpl<T>(list, pageable, total) {
+        override fun getTotalElements(): Long {
+            return total
+        }
+    }
+
+    private fun <T> toPage(list: List<T>, pageNo: Int, size: Int, sort: Sort,
+                           includePreviousPages: Boolean) : PagedModel<T> {
         val pageable = PageRequest.of(min(pageNo, list.size), min(size, list.size), sort)
 
         return PagedModel(
-            PageImpl(
+            PageReImpl(
                 list.subList(
-                    min(pageable.offset.toInt(), list.size),
+                    min(if (includePreviousPages) 0 else pageable.offset.toInt(), list.size),
                     min(pageable.offset.toInt() + pageable.pageSize, list.size)
                 ),
                 pageable,
@@ -146,4 +177,6 @@ class InventoryController(private val inventoryRepository: InventoryRepository,
             )
         )
     }
+
+
 }

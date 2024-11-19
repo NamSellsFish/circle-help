@@ -3,15 +3,13 @@ package server.circlehelp.services
 import com.fasterxml.jackson.databind.ObjectMapper
 import io.reactivex.rxjava3.core.Observable
 import io.reactivex.rxjava3.core.Scheduler
-import jakarta.annotation.Resource
 import jakarta.persistence.EntityManager
 import org.slf4j.LoggerFactory.getLogger
 import org.springframework.beans.factory.annotation.Qualifier
 import org.springframework.context.ApplicationContext
+import org.springframework.dao.DuplicateKeyException
 import org.springframework.http.converter.json.Jackson2ObjectMapperBuilder
 import org.springframework.stereotype.Service
-import org.springframework.transaction.annotation.Isolation
-import org.springframework.transaction.annotation.Transactional
 import server.circlehelp.annotations.RepeatableReadTransaction
 import server.circlehelp.api.complement
 import server.circlehelp.api.response.CompartmentPosition
@@ -22,9 +20,13 @@ import server.circlehelp.entities.ProductOnCompartment
 import server.circlehelp.repositories.InventoryRepository
 import server.circlehelp.repositories.ProductOnCompartmentRepository
 import server.circlehelp.repositories.readonly.ReadonlyInventoryRepository
+import server.circlehelp.repositories.readonly.ReadonlyInventoryRepository.Companion.addTo
 import server.circlehelp.repositories.readonly.ReadonlyPackageProductRepository
 import server.circlehelp.repositories.readonly.ReadonlyProductOnCompartmentRepository
+import java.util.Optional
+import java.util.stream.Collectors
 import java.util.stream.Stream
+import java.util.stream.StreamSupport
 
 @Service
 @RepeatableReadTransaction
@@ -40,15 +42,13 @@ class ShelfAtomicOpsService(
     private val logic: Logic,
     @Qualifier("computationScheduler") private val scheduler: Scheduler,
     private val applicationContext: ApplicationContext,
-    private val callerService: CallerService,
-    private val moveToInventoryService: MoveToInventoryService,
-    private val entityManager: EntityManager,
+    private val callerService: CallerService
 ) {
     private val objectMapper = mapperBuilder.build<ObjectMapper>()
 
     private val logger = getLogger(ShelfAtomicOpsService::class.java)
 
-    public val proxy : ShelfAtomicOpsService by lazy {
+    val proxy : ShelfAtomicOpsService by lazy {
         val result = applicationContext.getBean(ShelfAtomicOpsService::class.java)
         if (result === this) throw AssertionError("Expected proxy, received original object.")
         result
@@ -59,12 +59,23 @@ class ShelfAtomicOpsService(
             return this
         }
 
+    val compartments = HashSet<Compartment>()
+
+    fun add(compartment: Compartment) {
+        if (compartments.contains(compartment))
+            throw DuplicateKeyException("${compartment.getLocation()}")
+        compartments.add(compartment)
+    }
+
     fun moveToShelf(inventoryStock: InventoryStock,
                     compartment: Compartment,
+                    productOnCompartmentFunc: ProductOnCompartment.() -> Unit = {},
                     displace: Boolean = true,
                     allowExpiring: Boolean = false,
                     doLogging: Boolean = true) : Pair<String?, ErrorResponse?> {
+
         return callerService.call {
+
             proxy.moveToInventory(compartment, doLogging = false)
             if (logic.isExpiring(inventoryStock.packageProduct) && allowExpiring.complement()) {
                 logger.info("Blocked attempt to move expired product to shelf: " + objectMapper.writeValueAsString(inventoryStock))
@@ -90,7 +101,7 @@ class ShelfAtomicOpsService(
                 ProductOnCompartment(
                     compartment,
                     inventoryStock.packageProduct
-                )
+                ).apply(productOnCompartmentFunc)
 
                 productOnCompartmentRepository.save(newProductOnCompartment)
             }
@@ -104,6 +115,63 @@ class ShelfAtomicOpsService(
         }
     }
 
+    /**
+     * Prerequisite: [compartments] must only contain unique elements.
+     */
+    fun moveToShelf(inventoryStock: InventoryStock,
+                    compartments: Iterable<Compartment>,
+                    productOnCompartmentFunc: ProductOnCompartment.() -> Unit = {},
+                    displace: Boolean = true,
+                    allowExpiring: Boolean = false,
+                    doLogging: Boolean = true) : Pair<String?, ErrorResponse?> {
+
+        return callerService.call {
+
+            if (logic.isExpiring(inventoryStock.packageProduct) && allowExpiring.complement()) {
+                logger.info("Blocked attempt to move expired product to shelf: " + objectMapper.writeValueAsString(inventoryStock))
+                logic.error<String>(
+                    logic.expiredProductArrangementAttemptResponse(inventoryStock.packageProduct))
+            }
+
+            compartments.forEach { add(it) }
+
+            proxy.moveToInventory(StreamSupport.stream(compartments.spliterator(), false), false)
+                .blockingSubscribe()
+
+            val productOnCompartments = compartments.map {
+                ProductOnCompartment(
+                    it,
+                    inventoryStock.packageProduct
+                ).apply(productOnCompartmentFunc)
+            }
+
+            val size = productOnCompartments.size
+
+            if (inventoryStock.inventoryQuantity < size)
+                logic.error<String>(logic.notEnoughInInventoryResponse(
+                    inventoryStock.packageProduct.product.sku,
+                    inventoryStock.packageProduct.orderedPackage.id!!
+                ))
+
+            if (inventoryStock.inventoryQuantity == size) {
+                inventoryRepository.delete(inventoryStock)
+            } else {
+                inventoryStock.inventoryQuantity -= size
+                inventoryRepository.save(inventoryStock)
+            }
+
+            productOnCompartmentRepository.saveAll(productOnCompartments)
+
+            val message = productOnCompartments.joinToString("\n", prefix = "\n") {
+                "Moved product '${inventoryStock.packageProduct.product.sku}' to compartment: ${it.compartment.getLocation()}"
+            }
+
+            if (doLogging)
+                logger.info(message)
+
+            logic.item(message)
+        }
+    }
 
     /*
     private fun moveToShelf(id: Long, location: CompartmentPosition) : ResponseEntity<String> {
@@ -166,23 +234,31 @@ class ShelfAtomicOpsService(
 
          */
 
+        val map = listOf(newCompartment to newProductOnCompartment,
+            oldCompartment to oldProductOnCompartment)
 
-        fun map(new: Boolean) : Pair<Compartment, ProductOnCompartment?> {
-            return if(new)
-                newCompartment to newProductOnCompartment
-            else
-                oldCompartment to oldProductOnCompartment
-        }
+        val map2 = listOf(
+                Triple(newCompartment,
+                    newProductOnCompartment?.packageProduct,
+                    newProductOnCompartment?.status),
+                Triple(oldCompartment,
+                    oldProductOnCompartment?.packageProduct,
+                    oldProductOnCompartment?.status)
+        )
 
         for (new in listOf(true, false)) {
-            val (_, productOnCompartment) = map(new)
-            val (otherCompartment, otherProductOnCompartment) = map(!new)
+            val (_, productOnCompartment) = map[if (new) 1 else 0]
+            val (otherCompartment, packageProduct, status) = map2[if (!new) 1 else 0]
             if (productOnCompartment != null) {
-                if (otherProductOnCompartment == null) {
+                if (packageProduct == null || status == null) {
                     productOnCompartment.compartment = otherCompartment
                 } else {
-                    productOnCompartment.packageProduct = otherProductOnCompartment.packageProduct
-                    productOnCompartment.status = otherProductOnCompartment.status
+
+                    logger.info(productOnCompartment.packageProduct.product.sku)
+                    logger.info(packageProduct.product.sku)
+
+                    productOnCompartment.packageProduct = packageProduct
+                    productOnCompartment.status = status
                 }
                 Stream.concat(savedProductOnCompartmentStream, Stream.of(productOnCompartment))
                     .also { savedProductOnCompartmentStream = it }
@@ -214,6 +290,37 @@ class ShelfAtomicOpsService(
     }
 
 
+    /**
+     * Prerequisite: [compartments] must contain only unique elements.
+     */
+    @RepeatableReadTransaction
+    fun moveToInventory(compartments: Stream<Compartment>, doLogging: Boolean = true) : Observable<Unit> {
+        val productOnCompartments =
+        Observable.fromStream(compartments)
+            .mapOptional { Optional.ofNullable(readonlyProductOnCompartmentRepository
+             .findByCompartment(it))
+        }.toList()
+
+        val addedStock = Observable.fromSingle(
+            productOnCompartments.map {it.stream().collect(
+                Collectors.groupingBy(
+                    {it!!.packageProduct},
+                    Collectors.counting()
+                )
+            ).map {
+                    (packageProduct, count) ->
+                    inventoryRepository.save(
+                        readonlyInventoryRepository.addTo(packageProduct, count.toInt())
+                    )
+                Unit
+            }
+            productOnCompartmentRepository.deleteAll(it)
+        })
+
+        return addedStock
+    }
+
+
     @RepeatableReadTransaction
     fun removeAll() : Observable<Unit> {
 
@@ -234,7 +341,7 @@ class ShelfAtomicOpsService(
                 Unit
             }
         }
-            .subscribeOn(scheduler).count().map {
+            .count().map {
                 logger.info("Delete Count: $it")
                 productOnCompartmentRepository.deleteAll()
             })

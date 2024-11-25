@@ -132,7 +132,7 @@ class ShelfAtomicOpsService(
         return callerService.call {
 
             if (logic.isExpiring(inventoryStock.packageProduct) && allowExpiring.complement()) {
-                logger.info("Blocked attempt to move expired product to shelf: " + objectMapper.writeValueAsString(inventoryStock))
+                logger.info("Blocked attempt to move expired product to shelf: " + inventoryStock.packageProduct.id!!)
                 logic.error<String>(
                     logic.expiredProductArrangementAttemptResponse(inventoryStock.packageProduct))
             }

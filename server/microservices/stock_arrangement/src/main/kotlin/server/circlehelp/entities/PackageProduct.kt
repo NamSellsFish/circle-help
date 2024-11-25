@@ -11,28 +11,31 @@ import jakarta.persistence.ManyToOne
 import jakarta.persistence.Table
 import jakarta.validation.constraints.Min
 import jakarta.validation.constraints.NotNull
-import server.circlehelp.entities.base.IdObjectBase
+import lombok.EqualsAndHashCode
 import java.math.BigDecimal
 import java.time.LocalDate
 
 
 @Entity
 @Table(uniqueConstraints = [UniqueConstraint(columnNames = ["product_sku", "ordered_package_id"])])
+@EqualsAndHashCode(onlyExplicitlyIncluded = true)
 class PackageProduct(
-    @ManyToOne(optional = false, fetch = FetchType.LAZY) var orderedPackage: ArrivedPackage,
-    @ManyToOne(optional = false, fetch = FetchType.LAZY) var product: Product,
+    @ManyToOne(optional = false, fetch = FetchType.LAZY) val orderedPackage: ArrivedPackage,
+    @ManyToOne(optional = false, fetch = FetchType.LAZY) val product: Product,
 
     @NotNull @Min(1)
     @Column(nullable = false)
-    var importedQuantity: Int,
+    val importedQuantity: Int,
 
     @NotNull @Min(0)
     @Column(nullable = false)
-    var wholesalePrice: BigDecimal,
+    val wholesalePrice: BigDecimal,
 
-    var expirationDate: LocalDate?,
+    val expirationDate: LocalDate?,
 
-    @Id @GeneratedValue override var id: Long? = null
-) : IdObjectBase<Long>()  {
+    @Id @GeneratedValue
+    @EqualsAndHashCode.Include
+    val id: Long? = null
+)  {
 
 }

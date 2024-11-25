@@ -1,23 +1,34 @@
 package server.circlehelp.entities
 
 import jakarta.persistence.Entity
+import jakarta.persistence.EntityListeners
 import jakarta.persistence.GeneratedValue
 import jakarta.persistence.Inheritance
 import jakarta.persistence.InheritanceType
-import jakarta.persistence.PrimaryKeyJoinColumn
+import lombok.EqualsAndHashCode
 import org.springframework.context.ApplicationContext
-import server.circlehelp.entities.base.IdObjectBase
+import server.circlehelp.delegated_classes.Autowirable
+import server.circlehelp.services.AutowirableAutowireService
 
 @Entity
 @Inheritance(strategy = InheritanceType.JOINED)
+@EqualsAndHashCode(onlyExplicitlyIncluded = true)
+@EntityListeners(AutowirableAutowireService::class)
 abstract class Topic(
     @jakarta.persistence.Id @GeneratedValue
-    override val id: Long? = null
-) : IdObjectBase<Long>() {
+    @EqualsAndHashCode.Include val id: Long? = null
+) : Autowirable {
+
+    @Transient
+    protected lateinit var applicationContext: ApplicationContext
 
     @Throws(IllegalStateException::class)
-    abstract fun submit(applicationContext: ApplicationContext): Any
+    abstract fun submit(): Any
 
     @Throws(IllegalStateException::class)
-    open fun reject(applicationContext: ApplicationContext): Any = Unit
+    open fun reject(): Any = Unit
+
+    override fun autowireApplicationContext(applicationContext: ApplicationContext) {
+        this.applicationContext = applicationContext
+    }
 }

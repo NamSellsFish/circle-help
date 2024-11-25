@@ -7,27 +7,28 @@ import jakarta.validation.constraints.NotBlank
 import jakarta.validation.constraints.NotNull
 import jakarta.validation.constraints.PastOrPresent
 import jakarta.validation.constraints.Size
-import server.circlehelp.entities.base.IdObjectBase
+import lombok.EqualsAndHashCode
 import java.time.LocalDate
 
 @Entity
+@EqualsAndHashCode(onlyExplicitlyIncluded = true)
 class Event(
 
     @NotNull @NotBlank @Size(min = 2, max = 30)
     @Column(length = 30, nullable = false)
-    var name: String,
+    val name: String,
 
     @NotNull
     @Column(nullable = false)
-    var startDate: LocalDate,
+    val startDate: LocalDate,
 
     @NotNull
     @Column(nullable = false)
-    var endDate: LocalDate,
+    val endDate: LocalDate,
 
     @jakarta.persistence.Id @GeneratedValue
-    override var id: Long? = null
-) : IdObjectBase<Long>() {
+    @EqualsAndHashCode.Include val id: Long? = null
+) {
 
     fun asLongRange() : LongRange {
         return startDate.toEpochDay()..endDate.toEpochDay()

@@ -225,7 +225,7 @@ class ShelvesTestScenarioSetupController(
 
             val inventoryStock = inventoryStockMutableIterator.next()
 
-            if (readonlyInventoryRepository.existsById(inventoryStock.id!!).not()) {
+            if (readonlyInventoryRepository.existsById(inventoryStock.packageProductID!!).not()) {
                 inventoryStockMutableIterator.remove()
                 continue
             }

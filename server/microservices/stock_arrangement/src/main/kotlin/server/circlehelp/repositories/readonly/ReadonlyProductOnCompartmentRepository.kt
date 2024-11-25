@@ -18,9 +18,9 @@ interface ReadonlyProductOnCompartmentRepository : ReadonlyRepository<ProductOnC
 
     fun findAllByOrderByCompartmentLayerNumberAscCompartmentNumberAsc(): List<ProductOnCompartment>
 
-    @Query("select p.id from ProductOnCompartment p")
+    @Query("select p.compartment.id from ProductOnCompartment p")
     fun findAllId() : List<Long>
 
-    @Query("select p.packageProduct.id from ProductOnCompartment p where p.id = :id")
+    @Query("select p.packageProduct.id from ProductOnCompartment p where p.compartment.id = :id")
     fun findPackageProductIdById(id: Long) : Long?
 }

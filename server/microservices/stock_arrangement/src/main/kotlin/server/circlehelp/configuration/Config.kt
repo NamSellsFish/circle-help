@@ -2,12 +2,15 @@ package server.circlehelp.configuration
 
 import com.fasterxml.jackson.annotation.JsonInclude
 import com.fasterxml.jackson.databind.ObjectMapper
+import com.fasterxml.jackson.databind.SerializationFeature
 import com.fasterxml.jackson.databind.ser.std.CalendarSerializer
 import com.fasterxml.jackson.databind.ser.std.SqlDateSerializer
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule
 import com.fasterxml.jackson.module.kotlin.registerKotlinModule
 import io.reactivex.rxjava3.core.Scheduler
 import io.reactivex.rxjava3.schedulers.Schedulers
+import lombok.extern.slf4j.Slf4j
+import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.autoconfigure.jackson.Jackson2ObjectMapperBuilderCustomizer
@@ -24,14 +27,14 @@ import java.util.concurrent.Executor
 @Configuration
 @EnableWebMvc
 @EnableSpringDataWebSupport
+@Slf4j
 class Config {
 
-    private val logger = LoggerFactory.getLogger(Config::class.java)
 
     init {
         val runtime = Runtime.getRuntime()
-        logger.info("Max Memory: ${runtime.maxMemory()}")
-        logger.info("Processors: ${runtime.availableProcessors()}")
+        log.info("Max Memory: ${runtime.maxMemory()}")
+        log.info("Processors: ${runtime.availableProcessors()}")
     }
 
     /**
@@ -48,17 +51,19 @@ class Config {
                     .registerModule(JavaTimeModule())
                     .setSerializationInclusion(JsonInclude.Include.NON_NULL)
                     .setDateFormat(df)
+                    .disable(SerializationFeature.FAIL_ON_EMPTY_BEANS)
             )
         }
 
     @Bean
     fun objectMapper(): ObjectMapper {
         val df = SimpleDateFormat("yyyy-MM-dd HH:mm:ss")
+
         return ObjectMapper()
-            .registerKotlinModule()
             .registerModule(JavaTimeModule())
             .setSerializationInclusion(JsonInclude.Include.NON_NULL)
             .setDateFormat(df)
+            .disable(SerializationFeature.FAIL_ON_EMPTY_BEANS)
     }
 
     @Bean(BeanQualifiers.computationScheduler)
@@ -71,4 +76,7 @@ class Config {
         return Schedulers.from { it.run() }
     }
 
+    companion object {
+        val log: Logger = LoggerFactory.getLogger(ExceptionHandler::class.java)
+    }
 }

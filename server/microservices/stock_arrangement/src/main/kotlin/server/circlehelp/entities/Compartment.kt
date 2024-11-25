@@ -11,25 +11,28 @@ import jakarta.persistence.Table
 import jakarta.persistence.UniqueConstraint
 import jakarta.validation.constraints.Min
 import jakarta.validation.constraints.Size
+import lombok.EqualsAndHashCode
 import org.jetbrains.annotations.NotNull
 import server.circlehelp.api.response.CompartmentPosition
-import server.circlehelp.entities.base.IdObjectBase
 
 @Entity
 @Table(uniqueConstraints = [UniqueConstraint(columnNames = ["layer_id", "number"])])
+@EqualsAndHashCode(onlyExplicitlyIncluded = true)
 class Compartment(
-    @ManyToOne(optional = false, fetch = FetchType.LAZY) var layer: Layer,
+    @ManyToOne(optional = false, fetch = FetchType.LAZY) val layer: Layer,
 
     @NotNull @Min(0)
     @Column(nullable = false)
-    var number: Int,
+    val number: Int,
 
     @NotNull @Size(min = 3, max = 4)
     @Column(nullable = false, length = 4)
     var compartmentNoFromUserPerspective: String,
 
-    @Id @GeneratedValue override var id: Long? = null
-) : IdObjectBase<Long>() {
+    @Id @GeneratedValue
+    @EqualsAndHashCode.Include
+    val id: Long? = null
+) {
 
     fun getLocation() = CompartmentPosition(layer.number, number)
 

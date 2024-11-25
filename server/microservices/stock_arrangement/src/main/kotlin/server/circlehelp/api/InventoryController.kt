@@ -83,7 +83,7 @@ class InventoryController(private val readonlyInventoryRepository: ReadonlyInven
                         &&
                         (it.packageProduct.importedQuantity in minQuantity..maxQuantity)
                         &&
-                        (logic.isExpiring(it.packageProduct).complement().xor(onlyExpired))
+                        (logic.isExpiring(it.packageProduct).complement().xor(onlyExpired)).or(true)
             }
 
         val result = inventoryStock

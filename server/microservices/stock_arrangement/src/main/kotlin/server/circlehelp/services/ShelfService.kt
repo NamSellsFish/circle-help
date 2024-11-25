@@ -13,9 +13,11 @@ import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Qualifier
 import org.springframework.http.HttpStatus
 import org.springframework.http.converter.json.Jackson2ObjectMapperBuilder
+import org.springframework.security.core.context.SecurityContext
 import org.springframework.stereotype.Service
 import server.circlehelp.annotations.RepeatableReadTransaction
 import server.circlehelp.api.complement
+import server.circlehelp.api.request.OrderApprovalRequest
 import server.circlehelp.api.request.PackageProductItem
 import server.circlehelp.api.response.CompartmentInfo
 import server.circlehelp.api.response.CompartmentPosition
@@ -306,7 +308,7 @@ class ShelfService(
                     compartments,
                     updateFunc =
                     {  it.mapNotNull {
-                            readonlyInventoryRepository.findById(it.id!!)
+                            readonlyInventoryRepository.findById(it.packageProductID!!)
                             .getOrNull()
                         }
                     }
@@ -316,7 +318,7 @@ class ShelfService(
                 newInventoryStocks =
                     newInventoryStocks
                     .mapNotNull {
-                        readonlyInventoryRepository.findById(it.id!!).getOrNull()
+                        readonlyInventoryRepository.findById(it.packageProductID!!).getOrNull()
                     }.sortedBy { it.inventoryQuantity }
             }
 
@@ -874,6 +876,11 @@ class ShelfService(
                 productIterator = products.iterator()
             }
         }
+    }
+
+    fun submit(securityContext: SecurityContext, orderApprovalRequest: OrderApprovalRequest) {
+
+
     }
 
 }

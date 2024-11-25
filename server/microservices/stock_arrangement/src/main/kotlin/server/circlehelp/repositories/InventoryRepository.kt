@@ -15,6 +15,6 @@ interface InventoryRepository : TransactionalJpaRepository<InventoryStock, Long>
 
     @Modifying
     @RepeatableReadTransaction
-    @Query("update InventoryStock i set i.inventoryQuantity = i.inventoryQuantity + 1 where i.id = :id")
+    @Query("update InventoryStock i set i.inventoryQuantity = i.inventoryQuantity + 1 where i.packageProduct.id = :id")
     fun incrementQuantityById(id: Long)
 }

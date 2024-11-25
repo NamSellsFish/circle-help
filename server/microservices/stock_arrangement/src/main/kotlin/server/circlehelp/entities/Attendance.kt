@@ -10,6 +10,7 @@ import jakarta.persistence.ManyToOne
 import jakarta.persistence.OneToOne
 import jakarta.persistence.Table
 import jakarta.persistence.UniqueConstraint
+import lombok.EqualsAndHashCode
 import org.springframework.data.annotation.CreatedDate
 import org.springframework.data.annotation.PersistenceCreator
 import org.springframework.data.domain.Sort
@@ -17,20 +18,22 @@ import org.springframework.data.domain.Sort.TypedSort
 import org.springframework.data.jpa.domain.support.AuditingEntityListener
 import server.circlehelp.api.response.AttendanceDto
 import server.circlehelp.auth.User
-import server.circlehelp.entities.base.IdObjectBase
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.LocalTime
 
 @Entity
 @Table(uniqueConstraints = [UniqueConstraint(columnNames = ["user", "date"])])
+@EqualsAndHashCode(onlyExplicitlyIncluded = true)
 class Attendance
 @PersistenceCreator
 private constructor (
     @ManyToOne(optional = false, fetch = FetchType.LAZY) val user: User,
     val punchOutTime: LocalTime? = null,
-    @jakarta.persistence.Id @GeneratedValue override var id: Long? = null
-) : IdObjectBase<Long>() {
+    @jakarta.persistence.Id @GeneratedValue
+    @EqualsAndHashCode.Include
+    val id: Long? = null
+) {
 
     constructor(user: User) : this(user, null, null)
 

@@ -6,10 +6,12 @@ import jakarta.persistence.Id
 import jakarta.persistence.JoinColumn
 import jakarta.persistence.MapsId
 import jakarta.persistence.OneToOne
+import lombok.EqualsAndHashCode
 import server.circlehelp.auth.User
 import java.time.LocalTime
 
 @Entity
+@EqualsAndHashCode(onlyExplicitlyIncluded = true)
 class WorkShift(
     @OneToOne @MapsId("userEmailField") val user: User,
     @Column(nullable = false) val startTime: LocalTime,
@@ -17,5 +19,6 @@ class WorkShift(
     ) {
 
     @Id
-    @JoinColumn(name = "user_email") val userEmailField: String = user.email
+    @EqualsAndHashCode.Include
+    val userEmailField: String = user.email
 }

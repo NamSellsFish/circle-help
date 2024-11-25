@@ -10,52 +10,66 @@ import jakarta.persistence.Id
 import jakarta.persistence.JoinColumn
 import jakarta.persistence.ManyToOne
 import lombok.AccessLevel
+import lombok.EqualsAndHashCode
 import lombok.With
+import org.springframework.beans.factory.getBean
 import org.springframework.context.ApplicationContext
 import server.circlehelp.auth.Admin
+import server.circlehelp.auth.Employee
 import server.circlehelp.auth.User
-import server.circlehelp.entities.base.IdObjectBase
+import server.circlehelp.delegated_classes.Autowirable
+import server.circlehelp.repositories.AppraisableRepository
+import java.time.LocalDateTime
 
 @Entity
+@EqualsAndHashCode(onlyExplicitlyIncluded = true)
 class Appraisable(
 
     @ManyToOne(optional = false, fetch = FetchType.LAZY)
-    val submitter: User,
+    val submitter: Employee,
 
     @ManyToOne(optional = false, fetch = FetchType.LAZY)
     val topic: Topic,
 
-    @Id @GeneratedValue
-    override val id: Long? = null,
-) : IdObjectBase<Long>() {
+    @Id @GeneratedValue @EqualsAndHashCode.Include
+    val id: Long? = null,
+) : Autowirable {
+
+    val createdDate: LocalDateTime = LocalDateTime.now()
+
+    @Transient
+    protected lateinit var applicationContext: ApplicationContext
 
     @Embedded
     var approvalData: ApprovalData = ApprovalData()
         protected set
 
     @Throws(IllegalStateException::class)
-    fun appraise(approvalData: ApprovalData, applicationContext: ApplicationContext): Any {
-        if (this.approvalData.approved != null) {
+    fun appraise(appraiser: Admin, approved: Boolean, reason: String = ""): Any {
+        if (approvalData.approved != null) {
             throw IllegalStateException(
                 "Object already ${approvedBooleanToString(this.approvalData.approved)}."
             )
         }
 
-        val result = when(approvalData.approved) {
-            null -> throw IllegalArgumentException(
-                "${ApprovalData::class.qualifiedName}.${ApprovalData::approved.name} was null."
-            )
+        val result = when(approved) {
 
             true -> {
-                topic.submit(applicationContext)
+                topic.submit()
             }
 
             false -> {
-                topic.reject(applicationContext)
+                topic.reject()
             }
         }
 
-        this.approvalData = approvalData
+        approvalData = ApprovalData(
+            appraiser, approved, reason, LocalDateTime.now()
+        )
+
+        val repository = applicationContext.getBean<AppraisableRepository>()
+
+        repository.save(this)
 
         return result
     }
@@ -69,6 +83,8 @@ class Appraisable(
 
         @Column(nullable = false, length = 255)
         val reason: String = "",
+
+        val approvalDate: LocalDateTime? = null
     )
 
     companion object {
@@ -79,5 +95,9 @@ class Appraisable(
                 null -> "pending"
             }
         }
+    }
+
+    override fun autowireApplicationContext(applicationContext: ApplicationContext) {
+        this.applicationContext = applicationContext
     }
 }

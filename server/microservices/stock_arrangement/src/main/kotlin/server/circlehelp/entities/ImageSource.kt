@@ -11,27 +11,18 @@ import jakarta.validation.constraints.NotBlank
 import jakarta.validation.constraints.NotEmpty
 import jakarta.validation.constraints.NotNull
 import jakarta.validation.constraints.Size
+import lombok.EqualsAndHashCode
 
 @Entity
 @Table(indexes = [Index(columnList = "product_sku")])
+@EqualsAndHashCode(onlyExplicitlyIncluded = true)
 class ImageSource(
     @NotNull @NotBlank
     @jakarta.persistence.Id @NotEmpty
-    var url: String,
+    @EqualsAndHashCode.Include
+    val url: String,
 
     @OneToOne @JoinColumn(nullable = false)
-    var product: Product
+    val product: Product
 ) {
-    override fun equals(other: Any?): Boolean {
-        if (this === other) return true
-        if (javaClass != other?.javaClass) return false
-
-        other as ImageSource
-
-        return url == other.url
-    }
-
-    override fun hashCode(): Int {
-        return url.hashCode()
-    }
 }

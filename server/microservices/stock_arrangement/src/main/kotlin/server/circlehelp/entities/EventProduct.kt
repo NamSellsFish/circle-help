@@ -8,21 +8,22 @@ import jakarta.persistence.ManyToOne
 import jakarta.persistence.Table
 import jakarta.persistence.UniqueConstraint
 import jakarta.validation.constraints.NotNull
-import server.circlehelp.entities.base.IdObjectBase
+import lombok.EqualsAndHashCode
 
 @Entity
 @Table(uniqueConstraints = [UniqueConstraint(columnNames = ["event_id", "product_sku"])])
+@EqualsAndHashCode(onlyExplicitlyIncluded = true)
 class EventProduct(
 
     @NotNull
     @ManyToOne(optional = false, fetch = FetchType.LAZY)
-    var product: Product,
+    val product: Product,
 
     @NotNull
     @ManyToOne(optional = false, fetch = FetchType.LAZY)
-    var event: Event,
+    val event: Event,
 
     @jakarta.persistence.Id @GeneratedValue
-    override var id: Long? = null
-): IdObjectBase<Long>() {
+    @EqualsAndHashCode.Include val id: Long? = null
+) {
 }

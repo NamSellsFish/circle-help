@@ -81,7 +81,7 @@ class TestDataManager(
     fun fetchProduct() = productRepository.findById(product.sku).getOrNull()
     fun fetchArrivedPackage() = arrivedPackageRepository.findById(arrivedPackage.id!!).getOrNull()
     fun fetchPackageProduct() = packageProductRepository.findById(packageProduct.id!!).getOrNull()
-    fun fetchInventoryStock() = inventoryRepository.findById(inventoryStock.id!!).getOrNull()
+    fun fetchInventoryStock() = inventoryRepository.findById(inventoryStock.packageProductID!!).getOrNull()
 
     data class TestDataItems(
         var inventoryStock: InventoryStock?,
@@ -177,7 +177,7 @@ class TestDataManager(
         productRepository.delete(product)
 
         var times = 0
-        while (productOnCompartmentRepository.findById(productOnCompartment.id!!).isPresent) {
+        while (productOnCompartmentRepository.findById(productOnCompartment.compartmentID!!).isPresent) {
             Thread.sleep(100)
             times++
             if (times >= 20)

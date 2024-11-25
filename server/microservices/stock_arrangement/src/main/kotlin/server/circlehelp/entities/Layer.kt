@@ -9,15 +9,18 @@ import jakarta.persistence.Table
 import jakarta.persistence.UniqueConstraint
 import jakarta.validation.constraints.Min
 import jakarta.validation.constraints.NotNull
-import server.circlehelp.entities.base.IdObjectBase
+import lombok.EqualsAndHashCode
 
 @Entity
+@EqualsAndHashCode(onlyExplicitlyIncluded = true)
 class Layer(
 
     @NotNull @Min(1)
     @Column(unique = true, nullable = false)
-    var number: Int,
+    val number: Int,
 
-    @Id @GeneratedValue override var id: Long? = null
-) : IdObjectBase<Long>()  {
+    @Id @GeneratedValue
+    @EqualsAndHashCode.Include
+    val id: Long? = null
+) {
 }

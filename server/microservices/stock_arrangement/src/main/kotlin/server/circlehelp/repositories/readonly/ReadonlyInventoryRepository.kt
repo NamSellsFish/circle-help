@@ -18,7 +18,7 @@ interface ReadonlyInventoryRepository : ReadonlyRepository<InventoryStock, Long>
     fun findAllByOrderByPackageProductExpirationDateDesc(): List<InventoryStock>
 
     // TODO: Consider replacing with fragmented query.
-    @Query("SELECT id FROM circle_help_db.inventory_stock WHERE package_product_id = :id;", nativeQuery = true)
+    @Query("select i.packageProduct.id from InventoryStock i where i.packageProduct.id = :id")
     fun findIdByPackageProductId(id: Long) : Long?
 
     fun findAllByOrderByPackageProductOrderedPackageDateTimeDescPackageProductOrderedPackageIdDesc(): List<InventoryStock>

@@ -27,7 +27,7 @@ class OrderSubmissionTopic(
         protected set
 
     @Throws(IllegalStateException::class)
-    override fun submit(applicationContext: ApplicationContext): ArrivedPackage {
+    override fun submit(): ArrivedPackage {
 
         if (order != null) throw IllegalStateException("Already submitted.")
 

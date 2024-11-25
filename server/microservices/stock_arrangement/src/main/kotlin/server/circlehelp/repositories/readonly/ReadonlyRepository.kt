@@ -1,5 +1,6 @@
 package server.circlehelp.repositories.readonly
 
+import org.springframework.data.repository.ListPagingAndSortingRepository
 import org.springframework.data.repository.NoRepositoryBean
 import org.springframework.data.repository.Repository
 import server.circlehelp.annotations.RepeatableReadTransaction
@@ -7,7 +8,7 @@ import java.util.Optional
 
 @NoRepositoryBean
 @RepeatableReadTransaction(readOnly = true)
-interface ReadonlyRepository<T, ID> : Repository<T, ID> {
+interface ReadonlyRepository<T, ID> : ListPagingAndSortingRepository<T, ID> {
 
     /**
      * Retrieves an entity by its id.

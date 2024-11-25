@@ -22,6 +22,10 @@ spring:
 
   output.ansi.enabled : DETECT
 
+  jackson:
+    date-format: yyyy-MM-dd
+    time-zone: UTC
+
 server:
   port: 8001
 

@@ -19,7 +19,6 @@ import server.circlehelp.repositories.PackageProductRepository
 import server.circlehelp.repositories.ProductOnCompartmentRepository
 import server.circlehelp.repositories.ProductRepository
 import server.circlehelp.services.CallerService
-import server.circlehelp.services.Logic
 import java.math.BigDecimal
 import java.time.LocalDate
 import java.time.LocalDateTime
@@ -130,7 +129,7 @@ class TestDataManager(
 
         proxy.product = product
 
-        arrivedPackage = ArrivedPackage(arrivedDateTime, "Gehirn")
+        arrivedPackage = ArrivedPackage("Gehirn", arrivedDateTime)
         arrivedPackage = arrivedPackageRepository.save(arrivedPackage)
 
         proxy.arrivedPackage = arrivedPackage

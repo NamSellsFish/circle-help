@@ -54,7 +54,7 @@ class ShelvesController(
 
     @PostMapping("/autoMove_")
     fun autoMove(@RequestBody productID: ProductID): String {
-        return  shelfService.autoMove1(productID)
+        return shelfService.autoMove1(productID)
     }
 
     /**
@@ -92,8 +92,7 @@ class ShelvesController(
         @RequestParam(defaultValue = "False") event: Boolean,
         @RequestParam(defaultValue = "True") autoMove: Boolean,
     ): String {
-        return    shelfService.autoMove(slowSellCheck, event, autoMove)
-        
+        return shelfService.autoMove(slowSellCheck, event, autoMove)
     }
 
     @PostMapping("/manualMove")
@@ -120,8 +119,8 @@ class ShelvesController(
 
 
     @PostMapping("/arrangeToFront")
-    fun arrangeToFront(@RequestBody productList: ProductList): ProductList {
-        return productList
+    fun arrangeToFront(@RequestBody productList: ProductList): String {
+        return shelfService.arrangeToFront(productList)
     }
 
     @PostMapping("/arrangeEventStocks")

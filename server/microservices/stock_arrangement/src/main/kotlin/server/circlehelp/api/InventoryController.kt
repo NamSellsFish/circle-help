@@ -19,6 +19,7 @@ import server.circlehelp.repositories.readonly.ReadonlyImageSourceRepository
 import server.circlehelp.repositories.readonly.ReadonlyInventoryRepository
 import server.circlehelp.repositories.readonly.ReadonlyProductCategorizationRepository
 import server.circlehelp.services.Logic
+import java.lang.Math.ceilDiv
 import java.math.BigDecimal
 import kotlin.math.min
 
@@ -73,7 +74,7 @@ class InventoryController(private val readonlyInventoryRepository: ReadonlyInven
         appliedFilterOrSort: Boolean): ResponseEntity<String> {
 
         val inventoryStock = readonlyInventoryRepository
-            .findAllByOrderByPackageProductOrderedPackageDateDescPackageProductOrderedPackageIdDesc()
+            .findAllByOrderByPackageProductOrderedPackageDateTimeDescPackageProductOrderedPackageIdDesc()
             .stream()
             .filter {
                 (searchTerm.isEmpty() || it.packageProduct.product.name.contains(searchTerm, true))
@@ -157,8 +158,20 @@ class InventoryController(private val readonlyInventoryRepository: ReadonlyInven
     }
 
     private class PageReImpl<T>(list: List<T>, pageable: Pageable, val total: Long) : PageImpl<T>(list, pageable, total) {
+
+        private val _pageable: Pageable = pageable
+
         override fun getTotalElements(): Long {
             return total
+        }
+
+        override fun getSize(): Int {
+            return _pageable.pageSize
+        }
+
+        override fun getTotalPages(): Int {
+
+            return if (size <= 0) 1 else ceilDiv(totalElements, size).toInt()
         }
     }
 

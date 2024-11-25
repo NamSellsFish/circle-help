@@ -8,6 +8,4 @@ data class ProductOnCompartmentDto(
     val category: String,
     val productDetails: ProductDetails?
 ) {
-    constructor(position: CompartmentInfo, category: String, productDetails: ProductDetails?)
-            : this(position, 0, category, productDetails)
 }

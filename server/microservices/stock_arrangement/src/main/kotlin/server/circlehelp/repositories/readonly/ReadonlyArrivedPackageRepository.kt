@@ -6,5 +6,5 @@ import server.circlehelp.entities.ArrivedPackage
 @Repository
 interface ReadonlyArrivedPackageRepository : ReadonlyRepository<ArrivedPackage, Long> {
 
-    fun findAllByOrderByDateDescIdDesc() : List<ArrivedPackage>
+    fun findAllByOrderByDateTimeDescIdDesc() : List<ArrivedPackage>
 }

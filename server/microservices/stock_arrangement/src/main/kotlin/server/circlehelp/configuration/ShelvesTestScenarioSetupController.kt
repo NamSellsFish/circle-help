@@ -13,7 +13,7 @@ import server.circlehelp.api.complement
 import server.circlehelp.api.test
 import server.circlehelp.api.shelf
 import server.circlehelp.entities.Compartment
-import server.circlehelp.entities.Product
+import server.circlehelp.entities.InventoryStock
 import server.circlehelp.entities.ProductOnCompartment
 import server.circlehelp.repositories.CompartmentProductCategoryRepository
 import server.circlehelp.repositories.CompartmentRepository
@@ -68,7 +68,9 @@ class ShelvesTestScenarioSetupController(
 
     @PostMapping(slowSell)
     @ResponseStatus(HttpStatus.OK)
-    fun slowSellEndPoint(@RequestParam count: Int, @RequestParam(defaultValue = "null") seed: Int?) {
+    fun slowSellEndPoint(@RequestParam count: Int,
+                         @RequestParam seed: Int?,
+                         @RequestParam(defaultValue = "true") slowSell: Boolean) {
         if (count <= 0) return
 
         var counter = count
@@ -81,14 +83,14 @@ class ShelvesTestScenarioSetupController(
 
         if (emptyCompartments.any().complement()) return
 
-        val compartmentIterator = emptyCompartments.shuffled(random).iterator()
+        val compartmentIterator = emptyCompartments.shuffled(random).take(count).iterator()
 
-        for (order in readonlyArrivedPackageRepository.findAllByOrderByDateDescIdDesc()) {
+        for (order in readonlyArrivedPackageRepository.findAllByOrderByDateTimeDescIdDesc()) {
 
             continuousArrangement(
                 LinkedList(readonlyInventoryRepository.findAll().filter {
                     logic.isExpiring(it.packageProduct).not()
-                }.map { it.packageProduct.product }) ,
+                }) ,
                 compartmentIterator
             ) { status = 3 }
 
@@ -130,7 +132,7 @@ class ShelvesTestScenarioSetupController(
 
     @PostMapping(expiring)
     @ResponseStatus(HttpStatus.OK)
-    fun expiringEndPoint(@RequestParam count: Int, @RequestParam(defaultValue = "null") seed: Int?) {
+    fun expiringEndPoint(@RequestParam count: Int, @RequestParam seed: Int?) {
         if (count <= 0) return
 
         var counter = count
@@ -143,14 +145,14 @@ class ShelvesTestScenarioSetupController(
 
         if (emptyCompartments.any().complement()) return
 
-        val compartmentIterator = emptyCompartments.shuffled(random).iterator()
+        val compartmentIterator = emptyCompartments.shuffled(random).take(count).iterator()
 
-        for (order in readonlyArrivedPackageRepository.findAllByOrderByDateDescIdDesc()) {
+        for (order in readonlyArrivedPackageRepository.findAllByOrderByDateTimeDescIdDesc()) {
 
             continuousArrangement(
                 LinkedList(readonlyInventoryRepository.findAll().filter {
-                    logic.isExpiring(it.packageProduct).not()
-                }.map { it.packageProduct.product }),
+                    logic.isExpiring(it.packageProduct)
+                }),
                 compartmentIterator
             ) { status = 2 }
 
@@ -192,7 +194,7 @@ class ShelvesTestScenarioSetupController(
 
     @PostMapping(remove)
     @ResponseStatus(HttpStatus.OK)
-    fun removeRandomEndPoint(@RequestParam count: Int, @RequestParam(defaultValue = "null") seed: Int?) {
+    fun removeRandomEndPoint(@RequestParam count: Int, @RequestParam seed: Int?) {
         if (count <= 0) return
 
         val random = getRandom(seed, 0)
@@ -210,37 +212,31 @@ class ShelvesTestScenarioSetupController(
     /**
      * Copied from [server.circlehelp.services.ShelfService]
      */
-    private fun continuousArrangement(products: LinkedList<Product>,
+    private fun continuousArrangement(inventoryStocks: LinkedList<InventoryStock>,
                                       compartmentIterator: Iterator<Compartment>,
                                       productOnCompartmentFunc: ProductOnCompartment.() -> Unit = {}): String {
 
         val stringBuilder = StringBuilder()
 
-        var productIterator = products.iterator()
+        var inventoryStockMutableIterator = inventoryStocks.iterator()
         //val compartmentIterator = compartments.iterator()
 
-        while (productIterator.hasNext() && compartmentIterator.hasNext()) {
+        while (inventoryStockMutableIterator.hasNext() && compartmentIterator.hasNext()) {
 
-            val product = productIterator.next()
+            val inventoryStock = inventoryStockMutableIterator.next()
 
-            val inventoryStock =
-                readonlyInventoryRepository
-                    .findAllByOrderByPackageProductExpirationDateDesc()
-                    .firstOrNull { it.packageProduct.product == product
-                            && it.inventoryQuantity > 0 }
-
-            if (inventoryStock == null) {
-                productIterator.remove()
+            if (readonlyInventoryRepository.existsById(inventoryStock.id!!).not()) {
+                inventoryStockMutableIterator.remove()
                 continue
             }
 
             val compartment = compartmentIterator.next()
 
             stringBuilder.appendLine(shelfAtomicOpsService.moveToShelf(
-                inventoryStock,compartment, productOnCompartmentFunc))
+                inventoryStock,compartment, productOnCompartmentFunc, allowExpiring = true))
 
-            if (productIterator.hasNext().complement()) {
-                productIterator = products.iterator()
+            if (inventoryStockMutableIterator.hasNext().complement()) {
+                inventoryStockMutableIterator = inventoryStocks.iterator()
             }
         }
 

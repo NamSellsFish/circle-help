@@ -27,6 +27,9 @@ repositories {
 }
 
 dependencies {
+
+  implementation("org.springframework.boot:spring-boot-starter-actuator")
+
   implementation("org.springframework:spring-web")
   implementation("org.springframework.session:spring-session-jdbc")
   implementation("org.springframework.session:spring-session-core")
@@ -41,11 +44,17 @@ dependencies {
   implementation("org.springframework.boot:spring-boot-starter-web")
   implementation("org.springframework.boot:spring-boot-starter-data-jpa")
   implementation("org.jetbrains.kotlin:kotlin-reflect")
-  compileOnly("org.projectlombok:lombok")
   implementation("com.mysql:mysql-connector-j")
+
+  compileOnly("org.projectlombok:lombok")
+
+  developmentOnly("org.springframework.boot:spring-boot-devtools")
+
   annotationProcessor("org.projectlombok:lombok")
+
   testImplementation("org.springframework.boot:spring-boot-starter-test")
   testImplementation("org.jetbrains.kotlin:kotlin-test-junit5")
+
   testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 }
 
@@ -59,8 +68,6 @@ tasks.withType<Test> {
   useJUnitPlatform()
 }
 
-tasks.register("printEnvVariables") {
-    doLast {
-        println("JAVA_HOME: ${System.getenv("JAVA_HOME")}")
-    }
+tasks.register<Exec>("cds") {
+  environment("BP_JVM_CDS_ENABLED", "true")
 }

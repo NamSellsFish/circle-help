@@ -1,7 +1,6 @@
 package server.circlehelp.configuration
 
 import org.springframework.context.annotation.Configuration
-import org.springframework.transaction.annotation.Transactional
 import server.circlehelp.annotations.RepeatableReadTransaction
 import server.circlehelp.api.response.CompartmentPosition
 import server.circlehelp.entities.ArrivedPackage
@@ -214,8 +213,8 @@ class SampleDataConfiguration(
         val arrivalDate = LocalDateTime.of(2024, 6, 6, 6, 0)
 
         val arrivedPackage = ArrivedPackage(
-            arrivalDate,
-            "Reichtümer"
+            "Reichtümer",
+            arrivalDate
         )
         arrivedPackageRepository.save(arrivedPackage)
 
@@ -341,7 +340,7 @@ class SampleDataConfiguration(
      */
     private fun setupProductArrangement() {
 
-        val arrivedPackage = ArrivedPackage(LocalDateTime.of(2024, 1, 1, 1, 1), "Gehirn")
+        val arrivedPackage = ArrivedPackage("Gehirn", LocalDateTime.of(2024, 1, 1, 1, 1))
         val expirationDate = LocalDate.of(2025, 1, 1)
 
         arrivedPackageRepository.save(arrivedPackage)
@@ -373,7 +372,7 @@ class SampleDataConfiguration(
     }
 
     private fun expiredPackage() {
-        val arrivedPackage = ArrivedPackage(LocalDateTime.of(2023, 1, 1, 1, 1), "Gehirn")
+        val arrivedPackage = ArrivedPackage("Gehirn", LocalDateTime.of(2023, 1, 1, 1, 1))
         val expirationDate = LocalDate.of(2024, 1, 1)
 
         arrivedPackageRepository.save(arrivedPackage)
@@ -405,7 +404,7 @@ class SampleDataConfiguration(
     }
 
     private fun eventProduct() {
-        val arrivedPackage = ArrivedPackage(LocalDateTime.of(2024, 4, 1, 1, 1), "EventCompany")
+        val arrivedPackage = ArrivedPackage("EventCompany", LocalDateTime.of(2024, 4, 1, 1, 1))
         val expirationDate = null
         val products = productRepository.findAll()
         val packageProduct3 = PackageProduct(arrivedPackage, products[2], 20, BigDecimal(9), expirationDate)
@@ -430,7 +429,7 @@ class SampleDataConfiguration(
         expirationDate: LocalDate = LocalDate.of(2025, 4, 1),
         quantity: Int = 200
     ) {
-        val arrivedPackage = ArrivedPackage(arrivedDateTime, "Gehirn")
+        val arrivedPackage = ArrivedPackage("Gehirn", arrivedDateTime)
 
         arrivedPackageRepository.save(arrivedPackage)
 

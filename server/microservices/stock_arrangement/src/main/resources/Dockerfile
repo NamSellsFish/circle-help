@@ -1,14 +1,29 @@
-# Use Ubuntu as the base image
-FROM ubuntu:22.04
+# Reference: https://docs.spring.io/spring-boot/reference/packaging/container-images/dockerfiles.html
 
-# Install OpenJDK 21 and wget
-RUN apt-get update && apt-get install -y wget openjdk-21-jre
+# Perform the extraction in a separate builder container
+FROM openjdk-21-jre AS builder
+WORKDIR /builder
+# This points to the built jar file in the target folder
+# Adjust this to 'target/*.jar' if you're using Maven
+ARG JAR_FILE=build/libs/*.jar
+# Copy the jar file to the working directory and rename it to application.jar
+COPY ${JAR_FILE} application.jar
+# Extract the jar file using an efficient layout
+RUN java -Djarmode=tools -jar application.jar extract --layers --destination extracted
 
-# Set working directory
-WORKDIR /app
-
-# Download the JAR file from Google Drive
-RUN wget -O app.jar "https://drive.usercontent.google.com/download?export=download&id=1tJgthPviI0f1fO_X0gTtK21MPoQ1nYew&confirm=t"
-
-# Run the JAR file
-CMD ["java", "-jar", "app.jar"]
+# This is the runtime container
+FROM openjdk-21-jre
+WORKDIR /application
+# Copy the extracted jar contents from the builder container into the working directory in the runtime container
+# Every copy step creates a new docker layer
+# This allows docker to only pull the changes it really needs
+COPY --from=builder /builder/extracted/dependencies/ ./
+COPY --from=builder /builder/extracted/spring-boot-loader/ ./
+COPY --from=builder /builder/extracted/snapshot-dependencies/ ./
+COPY --from=builder /builder/extracted/application/ ./
+# Execute the CDS training run
+RUN java -XX:ArchiveClassesAtExit=application.jsa -Dspring.context.exit=onRefresh -jar application.jar
+# Start the application jar with CDS enabled - this is not the uber jar used by the builder
+# This jar only contains application code and references to the extracted jar files
+# This layout is efficient to start up and CDS friendly
+ENTRYPOINT ["java", "-XX:SharedArchiveFile=application.jsa", "-jar", "application.jar"]

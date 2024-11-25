@@ -2,6 +2,7 @@ package server.circlehelp.entities
 
 import jakarta.persistence.Column
 import jakarta.persistence.Entity
+import jakarta.persistence.FetchType
 import jakarta.persistence.GeneratedValue
 import jakarta.persistence.Id
 import jakarta.persistence.JoinColumn
@@ -18,8 +19,8 @@ import java.time.LocalDate
 @Entity
 @Table(uniqueConstraints = [UniqueConstraint(columnNames = ["product_sku", "ordered_package_id"])])
 class PackageProduct(
-    @ManyToOne @JoinColumn(nullable = false) var orderedPackage: ArrivedPackage,
-    @ManyToOne @JoinColumn(nullable = false) var product: Product,
+    @ManyToOne(optional = false, fetch = FetchType.LAZY) var orderedPackage: ArrivedPackage,
+    @ManyToOne(optional = false, fetch = FetchType.LAZY) var product: Product,
 
     @NotNull @Min(1)
     @Column(nullable = false)

@@ -10,7 +10,8 @@ import jakarta.persistence.OneToOne
 import server.circlehelp.entities.base.IdObjectBase
 
 @Entity
-class FrontCompartment(@OneToOne @JoinColumn(nullable = false) val compartment: Compartment,
-                       @Id @GeneratedValue override var id: Long? = null
+class FrontCompartment(@OneToOne @MapsId("id") val compartment: Compartment
 ) : IdObjectBase<Long>()  {
+
+    @Id @JoinColumn(name = "compartment_id") override val id: Long = compartment.id!!
 }

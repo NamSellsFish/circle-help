@@ -24,6 +24,7 @@ import server.circlehelp.repositories.readonly.ReadonlyInventoryRepository.Compa
 import server.circlehelp.repositories.readonly.ReadonlyPackageProductRepository
 import server.circlehelp.repositories.readonly.ReadonlyProductOnCompartmentRepository
 import java.util.Optional
+import java.util.concurrent.TimeoutException
 import java.util.stream.Collectors
 import java.util.stream.Stream
 import java.util.stream.StreamSupport
@@ -59,6 +60,7 @@ class ShelfAtomicOpsService(
             return this
         }
 
+
     val compartments = HashSet<Compartment>()
 
     fun add(compartment: Compartment) {
@@ -66,6 +68,7 @@ class ShelfAtomicOpsService(
             throw DuplicateKeyException("${compartment.getLocation()}")
         compartments.add(compartment)
     }
+
 
     fun moveToShelf(inventoryStock: InventoryStock,
                     compartment: Compartment,
@@ -77,6 +80,7 @@ class ShelfAtomicOpsService(
         return callerService.call {
 
             proxy.moveToInventory(compartment, doLogging = false)
+
             if (logic.isExpiring(inventoryStock.packageProduct) && allowExpiring.complement()) {
                 logger.info("Blocked attempt to move expired product to shelf: " + objectMapper.writeValueAsString(inventoryStock))
                 logic.error<String>(
@@ -106,7 +110,7 @@ class ShelfAtomicOpsService(
                 productOnCompartmentRepository.save(newProductOnCompartment)
             }
 
-            val message = "Moved product '${inventoryStock.packageProduct.product.sku}' to compartment: ${compartment.getLocation()}"
+            val message = "Moved product '${inventoryStock.packageProduct.product.sku}' of packageProduct '${inventoryStock.packageProduct.id}' to compartment: ${compartment.getLocation()}"
 
             if (doLogging)
                 logger.info(message)
@@ -133,12 +137,28 @@ class ShelfAtomicOpsService(
                     logic.expiredProductArrangementAttemptResponse(inventoryStock.packageProduct))
             }
 
-            compartments.forEach { add(it) }
+            //compartments.forEach { add(it) }
 
-            proxy.moveToInventory(StreamSupport.stream(compartments.spliterator(), false), false)
+            //compartments.forEach { moveToInventory(it, false) }
+
+
+            moveToInventory(StreamSupport.stream(compartments.spliterator(), false), true)
                 .blockingSubscribe()
 
             val productOnCompartments = compartments.map {
+                var counter = 1
+                while (readonlyProductOnCompartmentRepository.existsByCompartment(it)) {
+
+                    val delay = 100L
+                    val time = counter * delay
+                    Thread.sleep(delay)
+                    logger.info("Waited for ${time}ms")
+                    if (counter >= 50)
+                        throw TimeoutException("Waited for ${time}ms")
+
+                    counter++
+                }
+
                 ProductOnCompartment(
                     it,
                     inventoryStock.packageProduct
@@ -163,7 +183,9 @@ class ShelfAtomicOpsService(
             productOnCompartmentRepository.saveAll(productOnCompartments)
 
             val message = productOnCompartments.joinToString("\n", prefix = "\n") {
-                "Moved product '${inventoryStock.packageProduct.product.sku}' to compartment: ${it.compartment.getLocation()}"
+                "Moved product '${inventoryStock.packageProduct.product.sku}' " +
+                        "of packageProduct ${inventoryStock.packageProduct.id} " +
+                        "to compartment: ${it.compartment.getLocation()}"
             }
 
             if (doLogging)
@@ -301,20 +323,34 @@ class ShelfAtomicOpsService(
              .findByCompartment(it))
         }.toList()
 
-        val addedStock = Observable.fromSingle(
-            productOnCompartments.map {it.stream().collect(
-                Collectors.groupingBy(
-                    {it!!.packageProduct},
-                    Collectors.counting()
+        var addedStock = Observable.fromSingle(
+            productOnCompartments.map {
+                val x = it.stream().collect(
+                    Collectors.groupingBy(
+                        {it!!.packageProduct},
+                        Collectors.counting()
+                    )
                 )
-            ).map {
+
+                x.entries.map { it.key.id to it.value }
+                    .map { logger.info("ID ${it.first}, Count ${it.second}") }
+
+                x.map {
                     (packageProduct, count) ->
+                    val stock =
+                        if (readonlyInventoryRepository.existsByPackageProduct(packageProduct))
+                            readonlyInventoryRepository.findByPackageProduct(packageProduct)!!
+                                .apply { inventoryQuantity += count.toInt() }
+                        else
+                            InventoryStock(packageProduct, count.toInt())
+
                     inventoryRepository.save(
-                        readonlyInventoryRepository.addTo(packageProduct, count.toInt())
+                        stock
                     )
                 Unit
             }
             productOnCompartmentRepository.deleteAll(it)
+            logger.info("Moved to inventory:\n" + it.map{ it.compartment.getLocation() }.joinToString("\n", "\n"))
         })
 
         return addedStock
@@ -385,7 +421,9 @@ class ShelfAtomicOpsService(
             productOnCompartmentRepository.delete(productOnCompartment)
         }
 
-        val message = "Removed product '${productOnCompartment.packageProduct.product.sku}' at compartment location: ${productOnCompartment.compartment.getLocation()}"
+        val message = "Removed product '${productOnCompartment.packageProduct.product.sku}' " +
+                "of packageProduct '${productOnCompartment.packageProduct.id}' " +
+                "at compartment location: ${productOnCompartment.compartment.getLocation()}"
 
         if (doLogging)
             logger.info(message)

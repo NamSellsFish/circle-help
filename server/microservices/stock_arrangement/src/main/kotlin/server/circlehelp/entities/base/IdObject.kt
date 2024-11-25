@@ -8,7 +8,7 @@ import kotlin.jvm.Throws
  */
 interface IdObject<ID : Number> {
 
-    var id: ID?
+    val id: ID?
 
     @Throws(UnsupportedOperationException::class)
     fun equalsID(other: Any?) : Boolean {

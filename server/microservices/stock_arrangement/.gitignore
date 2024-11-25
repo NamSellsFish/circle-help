@@ -42,3 +42,4 @@ out/
 /*.log*
 /src/main/kotlin/server/circlehelp/services/ShelfAtomicOpsImpl.kt
 /src/main/kotlin/server/circlehelp/services/MoveToInventoryService.kt
+/application/

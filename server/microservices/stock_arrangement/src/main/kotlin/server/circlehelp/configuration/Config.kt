@@ -1,6 +1,10 @@
 package server.circlehelp.configuration
 
+import com.fasterxml.jackson.annotation.JsonInclude
 import com.fasterxml.jackson.databind.ObjectMapper
+import com.fasterxml.jackson.databind.ser.std.CalendarSerializer
+import com.fasterxml.jackson.databind.ser.std.SqlDateSerializer
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule
 import com.fasterxml.jackson.module.kotlin.registerKotlinModule
 import io.reactivex.rxjava3.core.Scheduler
 import io.reactivex.rxjava3.schedulers.Schedulers
@@ -11,8 +15,10 @@ import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 import org.springframework.context.annotation.Primary
 import org.springframework.core.annotation.Order
+import org.springframework.data.jpa.repository.config.EnableJpaAuditing
 import org.springframework.data.web.config.EnableSpringDataWebSupport
 import org.springframework.web.servlet.config.annotation.EnableWebMvc
+import java.text.SimpleDateFormat
 import java.util.concurrent.Executor
 
 @Configuration
@@ -33,9 +39,27 @@ class Config {
     * @author Khoa Anh Pham
     */
     @Bean
-    @Autowired
     fun jackson2ObjectMapperBuilder() =
-        Jackson2ObjectMapperBuilderCustomizer { builder -> builder.configure(ObjectMapper().registerKotlinModule()) }
+        Jackson2ObjectMapperBuilderCustomizer { builder ->
+            val df = SimpleDateFormat("yyyy-MM-dd HH:mm:ss")
+            builder.configure(
+                ObjectMapper()
+                    .registerKotlinModule()
+                    .registerModule(JavaTimeModule())
+                    .setSerializationInclusion(JsonInclude.Include.NON_NULL)
+                    .setDateFormat(df)
+            )
+        }
+
+    @Bean
+    fun objectMapper(): ObjectMapper {
+        val df = SimpleDateFormat("yyyy-MM-dd HH:mm:ss")
+        return ObjectMapper()
+            .registerKotlinModule()
+            .registerModule(JavaTimeModule())
+            .setSerializationInclusion(JsonInclude.Include.NON_NULL)
+            .setDateFormat(df)
+    }
 
     @Bean(BeanQualifiers.computationScheduler)
     fun computationScheduler() : Scheduler {

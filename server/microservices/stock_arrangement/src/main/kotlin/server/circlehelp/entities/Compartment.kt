@@ -2,6 +2,7 @@ package server.circlehelp.entities
 
 import jakarta.persistence.Column
 import jakarta.persistence.Entity
+import jakarta.persistence.FetchType
 import jakarta.persistence.GeneratedValue
 import jakarta.persistence.Id
 import jakarta.persistence.JoinColumn
@@ -17,7 +18,7 @@ import server.circlehelp.entities.base.IdObjectBase
 @Entity
 @Table(uniqueConstraints = [UniqueConstraint(columnNames = ["layer_id", "number"])])
 class Compartment(
-    @ManyToOne @JoinColumn(nullable = false) var layer: Layer,
+    @ManyToOne(optional = false, fetch = FetchType.LAZY) var layer: Layer,
 
     @NotNull @Min(0)
     @Column(nullable = false)

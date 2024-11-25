@@ -9,6 +9,12 @@ import org.springframework.security.web.SecurityFilterChain
 import org.springframework.security.web.authentication.RememberMeServices
 import org.springframework.security.web.context.SecurityContextRepository
 import org.springframework.security.web.csrf.CookieCsrfTokenRepository
+import server.circlehelp.api.baseURL
+import server.circlehelp.api.inventory
+import server.circlehelp.api.management
+import server.circlehelp.api.shelf
+import server.circlehelp.api.test
+import server.circlehelp.auth.Roles
 
 @Configuration
 @EnableWebSecurity
@@ -21,9 +27,13 @@ class SecurityFilterConfig {
     ) : SecurityFilterChain {
         http {
             authorizeHttpRequests {
-                authorize(anyRequest, permitAll)
+                authorize("/admin/*", hasRole(Roles.Admin))
+                authorize("$baseURL$shelf/*", permitAll)
+                authorize("$baseURL$shelf$test/*", permitAll)
+                authorize("$baseURL$inventory", permitAll)
+                authorize("$baseURL$management/*", authenticated)
                 authorize("/kill", permitAll)
-                //authorize(anyRequest, authenticated)
+                authorize(anyRequest, authenticated)
             }
             csrf {
                 disable()

@@ -2,6 +2,7 @@ package server.login.services
 
 import jakarta.transaction.Transactional
 import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.dao.DuplicateKeyException
 import org.springframework.security.core.userdetails.UserDetails
 import org.springframework.security.core.userdetails.UsernameNotFoundException
 import org.springframework.security.crypto.password.PasswordEncoder
@@ -15,6 +16,7 @@ import server.login.entities.Roles
 import server.login.services.InlinedPasswordEncoder
 import server.login.value_classes.EncodedPassword
 import server.login.value_classes.Password
+import server.server.login.api.request.UpdateProfileRequest
 import kotlin.jvm.optionals.getOrNull
 
 @Service
@@ -46,9 +48,24 @@ class AccountServiceImpl(private val passwordEncoder: InlinedPasswordEncoder,
         return accountRepository.save(user)
     }
 
-    override fun changePassword(user: User, newPassword: Password) {
+    override fun updateUser(user: User, updateProfileRequest: UpdateProfileRequest) {
 
-        user.encodedPassword = passwordEncoder.encode(newPassword)
+        val (newEmail, newUsername, newPassword) = updateProfileRequest
+
+        if (newEmail != null && newEmail != user.email) {
+            if (accountRepository.existsById(newEmail))
+                throw DuplicateKeyException("$newEmail already exists.")
+
+            user.email = newEmail
+        }
+
+        if (newUsername != null) {
+            user.username = newUsername
+        }
+
+        if (newPassword != null)
+            user.encodedPassword = passwordEncoder.encode(newPassword)
+
         accountRepository.save(user)
     }
 

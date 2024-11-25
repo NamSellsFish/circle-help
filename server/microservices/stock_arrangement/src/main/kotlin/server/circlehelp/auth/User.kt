@@ -16,9 +16,22 @@ import jakarta.validation.constraints.Size
 @DiscriminatorColumn(name = "role", discriminatorType = DiscriminatorType.STRING, length = 20)
 abstract class User(@Size(min = 1, max = 20) @NotNull @Column(nullable = false, length = 20)
                     open var username: String,
-                    @Id @Email open var email: String,
-                    @Column(nullable = false) open var encodedPassword: EncodedPassword)
+                    @Id @Email @Column(length = 80) open var email: String,
+                    @Column(nullable = false, columnDefinition = "CHAR(68)")
+                    open var encodedPassword: EncodedPassword)
 {
 
     abstract fun getRole() : String
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (javaClass != other?.javaClass) return false
+
+        other as User
+
+        return email == other.email
+    }
+
+    override fun hashCode(): Int {
+        return email.hashCode()
+    }
 }

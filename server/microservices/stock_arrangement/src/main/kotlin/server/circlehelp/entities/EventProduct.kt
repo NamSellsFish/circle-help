@@ -1,6 +1,7 @@
 package server.circlehelp.entities
 
 import jakarta.persistence.Entity
+import jakarta.persistence.FetchType
 import jakarta.persistence.GeneratedValue
 import jakarta.persistence.JoinColumn
 import jakarta.persistence.ManyToOne
@@ -14,11 +15,11 @@ import server.circlehelp.entities.base.IdObjectBase
 class EventProduct(
 
     @NotNull
-    @ManyToOne @JoinColumn(nullable = false)
+    @ManyToOne(optional = false, fetch = FetchType.LAZY)
     var product: Product,
 
     @NotNull
-    @ManyToOne @JoinColumn(nullable = false)
+    @ManyToOne(optional = false, fetch = FetchType.LAZY)
     var event: Event,
 
     @jakarta.persistence.Id @GeneratedValue

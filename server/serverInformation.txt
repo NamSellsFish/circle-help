@@ -1,5 +1,0 @@
-"microservicePorts" =
-{
-    "auth" = "8080",
-    "stockArrangement" = "8081"
-}

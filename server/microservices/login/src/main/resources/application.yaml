@@ -3,7 +3,7 @@ spring:
     name: CircleHelpLoginMicroservice
 
   datasource:
-    url: jdbc:mysql://host21110776.ddns.net:8000/circle_help_db
+    url: jdbc:mysql://localhost:3306/circle_help_db
     username: remote_root
     password: admin
     driverClassName: com.mysql.cj.jdbc.Driver
@@ -15,6 +15,8 @@ spring:
   session:
     jdbc:
       initialize-schema: always
+
+  output.ansi.enabled: DETECT
 
   security:
     user:
@@ -47,6 +49,7 @@ server:
 logging:
   level:
     org.springframework.security: trace
+  file.name: login.log
 
 jakarta:
   persistence:
@@ -54,3 +57,9 @@ jakarta:
       url: spring.datasource.url
       user: spring.datasource.username
       pass: spring.datasource.password
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: "*"

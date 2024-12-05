@@ -1,9 +1,23 @@
 package server.circlehelp.configuration
 
+import com.fasterxml.jackson.databind.ObjectMapper
+import jakarta.persistence.EntityManager
+import org.slf4j.LoggerFactory
+import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
+import org.springframework.http.converter.json.Jackson2ObjectMapperBuilder
 import server.circlehelp.annotations.RepeatableReadTransaction
+import server.circlehelp.api.EmployeeManagementController
+import server.circlehelp.api.request.AttendanceRequest
+import server.circlehelp.api.request.AttendanceRequestType
+import server.circlehelp.api.request.OrderApprovalRequest
+import server.circlehelp.api.response.ArbitratedAttendance
+import server.circlehelp.api.response.AttendanceResponse
+import server.circlehelp.api.response.AttendanceType
 import server.circlehelp.api.response.CompartmentPosition
+import server.circlehelp.auth.AccountRepository
 import server.circlehelp.entities.ArrivedPackage
+import server.circlehelp.entities.Attendance
 import server.circlehelp.entities.Compartment
 import server.circlehelp.entities.CompartmentProductCategory
 import server.circlehelp.entities.Event
@@ -13,12 +27,17 @@ import server.circlehelp.entities.FrontCompartment
 import server.circlehelp.entities.ImageSource
 import server.circlehelp.entities.InventoryStock
 import server.circlehelp.entities.Layer
+import server.circlehelp.entities.Location
 import server.circlehelp.entities.PackageProduct
 import server.circlehelp.entities.Product
 import server.circlehelp.entities.ProductCategorization
 import server.circlehelp.entities.ProductCategory
 import server.circlehelp.entities.ProductOnCompartment
+import server.circlehelp.entities.TableAudit
+import server.circlehelp.entities.WorkShift
+import server.circlehelp.entities.WorkplaceLocation
 import server.circlehelp.repositories.ArrivedPackageRepository
+import server.circlehelp.repositories.AttendanceRepository
 import server.circlehelp.repositories.CompartmentProductCategoryRepository
 import server.circlehelp.repositories.CompartmentRepository
 import server.circlehelp.repositories.EventCompartmentRepository
@@ -33,15 +52,29 @@ import server.circlehelp.repositories.ProductCategoryRepository
 import server.circlehelp.repositories.ProductOnCompartmentRepository
 import server.circlehelp.repositories.ProductRepository
 import server.circlehelp.repositories.RowRepository
+import server.circlehelp.repositories.TableAuditRepository
+import server.circlehelp.repositories.WorkShiftRepository
+import server.circlehelp.repositories.WorkplaceLocationRepository
+import server.circlehelp.repositories.readonly.ReadonlyAttendanceRepository
 import server.circlehelp.repositories.readonly.ReadonlyEventProductRepository
 import server.circlehelp.repositories.readonly.ReadonlyEventRepository
+import server.circlehelp.repositories.readonly.ReadonlyWorkShiftRepository
+import server.circlehelp.services.AttendanceArbiterManager
 import server.circlehelp.services.Blocs
+import server.circlehelp.services.TransactionService
 import server.circlehelp.services.Logic
+import server.circlehelp.services.Logic.Companion.d
+import server.circlehelp.value_classes.UrlValue
 import java.math.BigDecimal
+import java.time.DayOfWeek
 import java.time.LocalDate
 import java.time.LocalDateTime
+import java.time.LocalTime
+import java.time.YearMonth
 import java.util.Locale
 import java.util.stream.Collectors.groupingBy
+import java.util.stream.Stream
+import kotlin.random.Random
 
 @Configuration
 @RepeatableReadTransaction
@@ -62,12 +95,28 @@ class SampleDataConfiguration(
     private val compartmentProductCategoryRepository: CompartmentProductCategoryRepository,
     private val eventRepository: EventRepository,
     private val eventProductRepository: EventProductRepository,
+    private val tableAuditRepository: TableAuditRepository,
+    private val workShiftRepository: WorkShiftRepository,
+    private val workplaceLocationRepository: WorkplaceLocationRepository,
+    private val attendanceRepository: AttendanceRepository,
 
     private val readonlyEventRepository: ReadonlyEventRepository,
     private val readonlyEventProductRepository: ReadonlyEventProductRepository,
+    private val readonlyWorkShiftRepository: ReadonlyWorkShiftRepository,
 
     private val logic: Logic,
+    private val entityManager: EntityManager,
+    private val transactionService: TransactionService,
+    private val accountRepository: AccountRepository,
+    private val readonlyAttendanceRepository: ReadonlyAttendanceRepository,
+
+    mapperBuilder: Jackson2ObjectMapperBuilder,
+    private val objectMapper: ObjectMapper,
+    attendanceArbiterManager: AttendanceArbiterManager,
 ) {
+
+    private val logger = LoggerFactory.getLogger(SampleDataConfiguration::class.java)
+    private val attendanceArbiter = attendanceArbiterManager.topAttendanceArbiter
 
     private data class StockInfo(
         val arrivedDateTime: LocalDateTime = LocalDateTime.of(2024, 4, 1, 1, 1),
@@ -76,52 +125,228 @@ class SampleDataConfiguration(
     )
 
     init {
-        run {
-            if (productRepository.count() > 0) return@run
 
-            setupBaseTables()
-            setupSpecialCompartments()
-            setupProductArrangement()
-            expiredPackage()
-            compartmentNumberingByShelf()
+        transactionService.requiredRollbackOnAny {
 
-            eventProduct()
-            setupCompartmentProductCategory()
-            addStock()
-        }
+            logger.info(objectMapper.writeValueAsString(LocalDateTime.now()))
 
-        //setupSpecialCompartments()
-        //addStock()
-        //setupCompartmentProductCategory()
-        //shelfRemovalUpdatePatch()
-        //setupSpecialCompartments()
-        //compartmentNumberingByShelf()
-        //lunchablesProduct()
-        //lunchablesDelivery()
-        //eventProduct()
-
-        // Add several package products.
-        run {
-            return@run
-            val stockInfos = listOf(
-                StockInfo(
-                    arrivedDateTime = LocalDateTime.of(2023, 4, 1, 12, 0),
-                    expirationDate = LocalDate.of(2024, 12, 12),
-                    quantity = 20
-                ),
-                StockInfo(
-                    arrivedDateTime = LocalDateTime.of(2024, 9, 9, 9, 0),
-                    expirationDate = LocalDate.of(2025, 4, 1),
-                    quantity = 10
-                ),
-                StockInfo(
-                    arrivedDateTime = LocalDateTime.of(2024, 10, 1, 10, 0),
-                    expirationDate = LocalDate.of(2025, 10, 1),
-                    quantity = 30
+            logger.info(objectMapper.writeValueAsString(OrderApprovalRequest.sample))
+            logger.info(objectMapper.writeValueAsString(
+                AttendanceRequest(
+                    AttendanceRequestType.PunchIn,
+                    LocalDate.now(),
+                    LocalTime.now(),
+                    LocalTime.now(),
+                    "https://placehold.co/400?text=Water+Bottle",
+                    BigDecimal( 10.8464752),
+                    BigDecimal(106.7784394)
                 )
-            )
+            ))
+            logger.info(objectMapper.writeValueAsString(
+                AttendanceResponse(
+                    AttendanceType.FullAttendance,
+                    LocalDate.now(),
+                    LocalTime.now(),
+                    LocalTime.now(),
+                    "https://placehold.co/400?text=Package"
+                )
+            ))
 
-            stockInfos.forEach { addStock(it.arrivedDateTime, it.expirationDate, it.quantity) }
+            run {
+                addTableAuditEntries()
+                addWorkShiftEntries()
+                addWorkplaceLocation()
+                addAttendanceData()
+
+                if (productRepository.count() > 0) return@run
+
+                setupBaseTables()
+                setupSpecialCompartments()
+                setupProductArrangement()
+                expiredPackage()
+                compartmentNumberingByShelf()
+
+                eventProduct()
+                setupCompartmentProductCategory()
+                addStock()
+            }
+
+            //setupSpecialCompartments()
+            //addStock()
+            //setupCompartmentProductCategory()
+            //shelfRemovalUpdatePatch()
+            //setupSpecialCompartments()
+            //compartmentNumberingByShelf()
+            //lunchablesProduct()
+            //lunchablesDelivery()
+            //eventProduct()
+
+            // Add several package products.
+            run {
+                return@run
+                val stockInfos = listOf(
+                    StockInfo(
+                        arrivedDateTime = LocalDateTime.of(2023, 4, 1, 12, 0),
+                        expirationDate = LocalDate.of(2024, 12, 12),
+                        quantity = 20
+                    ),
+                    StockInfo(
+                        arrivedDateTime = LocalDateTime.of(2024, 9, 9, 9, 0),
+                        expirationDate = LocalDate.of(2025, 4, 1),
+                        quantity = 10
+                    ),
+                    StockInfo(
+                        arrivedDateTime = LocalDateTime.of(2024, 10, 1, 10, 0),
+                        expirationDate = LocalDate.of(2025, 10, 1),
+                        quantity = 30
+                    )
+                )
+
+                stockInfos.forEach { addStock(it.arrivedDateTime, it.expirationDate, it.quantity) }
+            }
+
+
+            val arrivedDateTime = LocalDateTime.of(2024, 9, 9, 9, 0)
+            val expirationDate = LocalDate.of(2025, 4, 1)
+            val quantity = 33
+
+            /*
+            addEventAndNonEventStock(arrivedDateTime, expirationDate, quantity)
+             */
+
+            /*
+            (1..9L).map {
+                lunchablesDelivery(arrivedDateTime.plusWeeks(it), 3)
+            }
+
+             */
+        }
+    }
+
+    private fun addAttendanceData() {
+        if (attendanceRepository.count().toInt() == 0) {
+            val today = LocalDate.now()
+            val workDays = getWeekdaysInMonth(today.year, today.month.value - 1)
+                .stream().let {
+                    Stream.concat(it,
+                        getWeekdaysInMonth(today.year, today.month.value)
+                            .stream()
+                            .filter { it.dayOfMonth < today.dayOfMonth }
+                        )
+                }
+
+            val user = accountRepository.findById("employee@email.com").get()
+            val workShift = workShiftRepository.findById("employee@email.com").get()
+
+            workDays.forEach {
+                listOf(AttendanceRequestType.PunchIn, AttendanceRequestType.PunchOut).map { type ->
+
+                    if (type == AttendanceRequestType.PunchOut && Random.nextInt().mod(3) == 0) return@map Unit
+
+                    val attendance = readonlyAttendanceRepository.findByUserAndDate(user, it)
+
+                    val attendanceRequest = AttendanceRequest(
+                        type,
+                        it,
+                        LocalTime.of(8, 0).plusMinutes(Random.nextLong().mod(120L) - 60),
+                        LocalTime.of(17, 30).plusMinutes(Random.nextLong().mod(120L) - 60),
+                        "http://res.cloudinary.com/dkirx8mro/image/upload/v1733332265/samples/circle-help/file_vfhuha.jpg",
+                        0.d, 0.d
+                    )
+                    val result = attendanceArbiter.decide(
+                        ArbitratedAttendance(
+                            attendanceRequest.currDate,
+                            if (attendanceRequest.type == AttendanceRequestType.PunchIn)
+                                attendanceRequest.punchInTime
+                            else
+                                null,
+                            if (attendanceRequest.type == AttendanceRequestType.PunchOut)
+                                attendanceRequest.punchOutTime
+                            else
+                                null,
+                            UrlValue(attendanceRequest.imageUrl)
+                        ), workShift!!
+                    )
+
+                    if (attendanceRequest.type == AttendanceRequestType.PunchIn)
+                        attendanceRepository.save(
+                            Attendance(
+                                user,
+                                result.currDate,
+                                result.punchInTime!!,
+                                null,
+                                UrlValue(result.imageUrl),
+                                result.type
+                            )
+                        )
+                    else
+                        attendanceRepository.save(attendance!!.apply {
+                            punchOutTime = attendanceRequest.punchOutTime!!
+                            this.type = result.type
+                        })
+
+                    Unit
+                }
+            }
+        }
+    }
+
+    fun getWeekdaysInMonth(year: Int, month: Int): List<LocalDate> {
+        val yearMonth = YearMonth.of(year, month)
+        val firstDay = yearMonth.atDay(1)
+        val lastDay = yearMonth.atEndOfMonth()
+        return (0 until yearMonth.lengthOfMonth())
+            .map { firstDay.plusDays(it.toLong()) }
+            .filter { it.dayOfWeek != DayOfWeek.SATURDAY && it.dayOfWeek != DayOfWeek.SUNDAY } }
+
+
+    @Bean
+    fun workplaceLocation(): WorkplaceLocation {
+        return workplaceLocationRepository.findById(locationName).get()
+    }
+
+    private fun addWorkplaceLocation() {
+
+        if (workplaceLocationRepository.existsById(locationName).not())
+            workplaceLocationRepository.save(
+                WorkplaceLocation(locationName, Location(
+                    BigDecimal( 10.8464752),
+                    BigDecimal(106.7784394)))
+            )
+    }
+
+    private fun addWorkShiftEntries() {
+        accountRepository.findAll()
+            .forEach {
+                if (readonlyWorkShiftRepository.existsByUser(it).not())
+                    workShiftRepository.save(WorkShift(
+                        it,
+                        LocalTime.of(8, 0),
+                        LocalTime.of(17, 30)
+                    ))
+            }
+    }
+
+    private fun addTableAuditEntries() {
+        listOf(
+            ArrivedPackage::class,
+            Compartment::class,
+            CompartmentProductCategory::class,
+            EventCompartment::class,
+            FrontCompartment::class,
+            InventoryStock::class,
+            Layer::class,
+            PackageProduct::class,
+            Product::class,
+            ProductCategorization::class,
+            ProductCategory::class,
+            ProductOnCompartment::class,
+
+            Event::class,
+            EventProduct::class,
+        ).forEach {
+            if (tableAuditRepository.existsById(TableAudit.toSnakeCase(it.simpleName!!)).not())
+                tableAuditRepository.save(TableAudit.fromClass(it))
         }
     }
 
@@ -205,12 +430,15 @@ class SampleDataConfiguration(
         productCategorizationRepository.save(ProductCategorization(lunchableProduct, drinkCategory))
 
 
-        imageSourceRepository.save(ImageSource("https://placehold.co/400?text=Lunch-ables", lunchableProduct))
+        imageSourceRepository.save(ImageSource(
+            UrlValue(
+            "https://placehold.co/400?text=Lunch-ables"), lunchableProduct))
     }
 
-    private fun lunchablesDelivery() {
-
-        val arrivalDate = LocalDateTime.of(2024, 6, 6, 6, 0)
+    private fun lunchablesDelivery(
+        arrivalDate: LocalDateTime = LocalDateTime.of(2024, 6, 6, 6, 0),
+        quantity: Int = 10,
+    ) {
 
         val arrivedPackage = ArrivedPackage(
             "Reichtümer",
@@ -229,7 +457,7 @@ class SampleDataConfiguration(
         val packageProduct = PackageProduct(
             arrivedPackage,
             product,
-            100,
+            quantity,
             BigDecimal(40),
             arrivalDate.plusMonths(12).toLocalDate())
         packageProductRepository.save(packageProduct)
@@ -269,11 +497,11 @@ class SampleDataConfiguration(
             productCategorizationRepository.save(ProductCategorization(rainCoat, waterProof))
 
             val rationImg = ImageSource(
-                "https://placehold.co/400?text=${ration.name.replace(' ', '+')}", ration)
+                UrlValue("https://placehold.co/400?text=${ration.name.replace(' ', '+')}"), ration)
             val waterBottleImg = ImageSource(
-                "https://placehold.co/400?text=${waterBottle.name.replace(' ', '+')}", waterBottle)
+                UrlValue("https://placehold.co/400?text=${waterBottle.name.replace(' ', '+')}"), waterBottle)
             val rainCoatImg = ImageSource(
-                "https://placehold.co/400?text=${rainCoat.name.replace(' ', '+')}", rainCoat)
+                UrlValue("https://placehold.co/400?text=${rainCoat.name.replace(' ', '+')}"), rainCoat)
 
             imageSourceRepository.saveAll(listOf(rationImg, waterBottleImg, rainCoatImg))
         }
@@ -452,5 +680,35 @@ class SampleDataConfiguration(
         invs(InventoryStock(packageProduct1, quantity))
         invs(InventoryStock(packageProduct2, quantity))
         invs(InventoryStock(packageProduct3, quantity))
+    }
+
+    private fun addEventAndNonEventStock(
+        arrivedDateTime: LocalDateTime = LocalDateTime.of(2024, 4, 1, 1, 1),
+        expirationDate: LocalDate = LocalDate.of(2025, 4, 1),
+        quantity: Int = 200) {
+        val arrivedPackage = arrivedPackageRepository.save(
+            ArrivedPackage("Gehirn", arrivedDateTime)
+        )
+
+        fun pps(i: PackageProduct) = packageProductRepository.save(i)
+
+        val ration = productRepository.findById("DK000O").get()
+        val waterBottle = productRepository.findById("FD000O").get()
+
+        val packageProduct1 =
+            pps(
+                PackageProduct(arrivedPackage, ration, quantity, BigDecimal(15), expirationDate)
+            )
+        val packageProduct2 =
+            pps(PackageProduct(arrivedPackage, waterBottle, quantity, BigDecimal(8), expirationDate))
+
+        fun invs (i: InventoryStock) = inventoryRepository.save(i)
+
+        invs(InventoryStock(packageProduct1, quantity))
+        invs(InventoryStock(packageProduct2, quantity))
+    }
+
+    companion object {
+        val locationName = "CircleK"
     }
 }

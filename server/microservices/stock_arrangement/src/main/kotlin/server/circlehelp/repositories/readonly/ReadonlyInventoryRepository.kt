@@ -1,5 +1,6 @@
 package server.circlehelp.repositories.readonly
 
+import org.springframework.context.annotation.Primary
 import org.springframework.data.jpa.repository.Query
 import org.springframework.stereotype.Repository
 import server.circlehelp.entities.ArrivedPackage
@@ -7,6 +8,7 @@ import server.circlehelp.entities.InventoryStock
 import server.circlehelp.entities.PackageProduct
 
 @Repository
+@Primary
 interface ReadonlyInventoryRepository : ReadonlyRepository<InventoryStock, Long> {
 
     fun existsByPackageProduct(packageProduct: PackageProduct): Boolean

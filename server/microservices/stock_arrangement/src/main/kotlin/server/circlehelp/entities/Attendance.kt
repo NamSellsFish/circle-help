@@ -16,35 +16,44 @@ import org.springframework.data.annotation.PersistenceCreator
 import org.springframework.data.domain.Sort
 import org.springframework.data.domain.Sort.TypedSort
 import org.springframework.data.jpa.domain.support.AuditingEntityListener
+import server.circlehelp.api.response.ArbitratedAttendance
 import server.circlehelp.api.response.AttendanceDto
+import server.circlehelp.api.response.AttendanceType
 import server.circlehelp.auth.User
+import server.circlehelp.delegated_classes.AttendanceTypeArbiter
+import server.circlehelp.services.TableAuditingService
+import server.circlehelp.value_classes.UrlValue
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.LocalTime
 
 @Entity
-@Table(uniqueConstraints = [UniqueConstraint(columnNames = ["user", "date"])])
+@Table(uniqueConstraints = [UniqueConstraint(columnNames = ["user_email", "date"])])
 @EqualsAndHashCode(onlyExplicitlyIncluded = true)
-class Attendance
-@PersistenceCreator
-private constructor (
+@EntityListeners(TableAuditingService::class)
+class Attendance (
     @ManyToOne(optional = false, fetch = FetchType.LAZY) val user: User,
-    val punchOutTime: LocalTime? = null,
+    val date: LocalDate,
+    val punchInTime: LocalTime,
+    var punchOutTime: LocalTime? = null,
+    val imageUrl: UrlValue,
+    var type: AttendanceType,
     @jakarta.persistence.Id @GeneratedValue
     @EqualsAndHashCode.Include
     val id: Long? = null
 ) {
 
-    constructor(user: User) : this(user, null, null)
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (javaClass != other?.javaClass) return false
 
-    @Column(nullable = false)
-    val date: LocalDate = LocalDate.now()
+        other as Attendance
 
-    @Column(nullable = false)
-    val punchInTime: LocalTime = LocalTime.now()
+        return id == other.id
+    }
 
-    fun punchOut() : Attendance {
-        return Attendance(user, LocalTime.now(), id)
+    override fun hashCode(): Int {
+        return id?.hashCode() ?: 0
     }
 
     companion object {

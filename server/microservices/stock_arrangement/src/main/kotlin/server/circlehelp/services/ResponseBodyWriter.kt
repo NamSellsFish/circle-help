@@ -5,8 +5,8 @@ import org.slf4j.LoggerFactory
 import org.springframework.http.ResponseEntity
 import org.springframework.http.converter.json.Jackson2ObjectMapperBuilder
 import org.springframework.stereotype.Service
-import server.circlehelp.api.response.ErrorResponse
-import server.circlehelp.api.response.ErrorResponseException
+import server.circlehelp.api.response.ErrorsResponse
+import server.circlehelp.api.response.ErrorsResponseException
 import java.util.concurrent.Callable
 
 /**
@@ -18,11 +18,11 @@ class ResponseBodyWriter(mapperBuilder: Jackson2ObjectMapperBuilder) {
     private val logger = LoggerFactory.getLogger(ResponseBodyWriter::class.java)
     private val objectMapper = mapperBuilder.build<ObjectMapper>()
 
-    fun error(errorResponse: ErrorResponse) : ResponseEntity<String> {
-        logger.error(errorResponse.toString())
+    fun error(errorsResponse: ErrorsResponse) : ResponseEntity<String> {
+        logger.error(errorsResponse.toString())
         return ResponseEntity
-            .status(errorResponse.statusCode)
-            .body(objectMapper.writeValueAsString(errorResponse))
+            .status(errorsResponse.statusCode)
+            .body(objectMapper.writeValueAsString(errorsResponse))
     }
 
     /**
@@ -48,8 +48,8 @@ class ResponseBodyWriter(mapperBuilder: Jackson2ObjectMapperBuilder) {
     fun wrap(func: Callable<Any>) : ResponseEntity<String> {
         return try {
             body(func.call())
-        } catch (ex: ErrorResponseException) {
-            error(ex.errorResponse)
+        } catch (ex: ErrorsResponseException) {
+            error(ex.errorsResponse)
         }
     }
 }

@@ -92,7 +92,7 @@ class ShelvesTestScenarioSetupController(
                     logic.isExpiring(it.packageProduct).not()
                 }) ,
                 compartmentIterator
-            ) { status = 3 }
+            ) //{ status = 3 }
 
             if (compartmentIterator.hasNext().not()) return
 
@@ -154,7 +154,7 @@ class ShelvesTestScenarioSetupController(
                     logic.isExpiring(it.packageProduct)
                 }),
                 compartmentIterator
-            ) { status = 2 }
+            ) //{ status = 2 }
 
             if (compartmentIterator.hasNext().not()) return
 

@@ -48,7 +48,7 @@ class ShelfAtomicOpsServiceTest {
     lateinit var logic: Logic
 
     @Autowired
-    lateinit var callerService: CallerService
+    lateinit var transactionService: TransactionService
 
     @Autowired
     lateinit var testDataManager: TestDataManager

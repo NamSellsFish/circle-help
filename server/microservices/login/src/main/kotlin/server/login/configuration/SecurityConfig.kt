@@ -5,6 +5,10 @@ import com.nimbusds.jose.jwk.RSAKey
 import com.nimbusds.jose.jwk.source.ImmutableJWKSet
 import com.nimbusds.jose.jwk.source.JWKSource
 import com.nimbusds.jose.proc.SecurityContext
+import org.springframework.boot.actuate.autoconfigure.security.servlet.EndpointRequest
+import org.springframework.boot.actuate.health.HealthEndpoint
+import org.springframework.boot.actuate.web.exchanges.HttpExchangeRepository
+import org.springframework.boot.actuate.web.exchanges.InMemoryHttpExchangeRepository
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 import org.springframework.core.annotation.Order
@@ -98,6 +102,11 @@ class SecurityConfig(private val env: Environment) {
 
      */
 
+    @Bean
+    fun httpExchangeRepository(): HttpExchangeRepository {
+        return InMemoryHttpExchangeRepository()
+    }
+
     @get:Bean
     val securityContextRepository : SecurityContextRepository = DelegatingSecurityContextRepository(
         RequestAttributeSecurityContextRepository(),
@@ -158,6 +167,8 @@ class SecurityConfig(private val env: Environment) {
                                    securityContextRepository: SecurityContextRepository): SecurityFilterChain {
         http {
             authorizeHttpRequests {
+                authorize(EndpointRequest.toAnyEndpoint().excluding(HealthEndpoint::class.java)
+                    , hasRole(Roles.Admin))
                 authorize("$baseURI/login", permitAll)
                 authorize("$baseURI/register", hasRole(Roles.Admin))
                 authorize("/kill", permitAll)

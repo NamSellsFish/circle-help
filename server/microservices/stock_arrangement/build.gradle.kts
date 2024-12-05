@@ -1,3 +1,5 @@
+import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
+
 plugins {
   kotlin("jvm") version "1.9.25"
   kotlin("plugin.spring") version "1.9.25"
@@ -6,10 +8,11 @@ plugins {
   //id("org.graalvm.buildtools.native") version "0.10.3"
   id("io.spring.dependency-management") version "1.1.6"
   kotlin("plugin.jpa") version "1.9.25"
+  id("io.freefair.lombok") version "8.11"
 }
 
 group = "circlehelp.server"
-version = "0.0.1-SNAPSHOT"
+version = "0.0.2-SNAPSHOT"
 
 java {
 
@@ -19,7 +22,7 @@ java {
 }
 
 allOpen {
-  annotation("jakarta.persistence.Entity")
+  //annotation("jakarta.persistence.Entity")
   annotation("jakarta.persistence.MappedSuperclass")
   annotation("jakarta.persistence.Embeddable")
 }
@@ -37,7 +40,12 @@ repositories {
 
 dependencies {
 
+  implementation("ch.obermuhlner:big-math:2.3.2")
+
   implementation("org.springframework.boot:spring-boot-starter-actuator")
+
+  implementation("com.github.ben-manes.caffeine:caffeine:3.1.8")
+  implementation("org.springframework.boot:spring-boot-starter-cache")
 
   implementation("jakarta.transaction:jakarta.transaction-api")
   implementation("io.reactivex.rxjava3:rxkotlin:3.0.1")
@@ -81,4 +89,12 @@ tasks.withType<Test> {
 
 tasks.register<Exec>("cds") {
   environment("BP_JVM_CDS_ENABLED", "true")
+}
+
+tasks.withType<JavaCompile> {
+  options.compilerArgs.add("-parameters")
+}
+
+tasks.withType<KotlinCompile> {
+  kotlinOptions { jvmTarget = "21" }
 }

@@ -1,13 +1,15 @@
 package server.circlehelp.repositories.readonly
 
+import org.springframework.data.jpa.repository.Lock
 import org.springframework.data.repository.ListPagingAndSortingRepository
 import org.springframework.data.repository.NoRepositoryBean
 import org.springframework.data.repository.Repository
+import server.circlehelp.annotations.ManagementRequiredTransaction
 import server.circlehelp.annotations.RepeatableReadTransaction
 import java.util.Optional
 
 @NoRepositoryBean
-@RepeatableReadTransaction(readOnly = true)
+@ManagementRequiredTransaction(readOnly = true)
 interface ReadonlyRepository<T, ID> : ListPagingAndSortingRepository<T, ID> {
 
     /**
@@ -36,14 +38,14 @@ interface ReadonlyRepository<T, ID> : ListPagingAndSortingRepository<T, ID> {
     fun count(): Long
 
     /**
-     * Returns all instances of the type.
+     * Returns all instances of the attendanceType.
      *
      * @return all entities
      */
     fun findAll(): List<T>
 
     /**
-     * Returns all instances of the type `T` with the given IDs.
+     * Returns all instances of the attendanceType `T` with the given IDs.
      *
      *
      * If some or all ids are not found, no entities are returned for these IDs.

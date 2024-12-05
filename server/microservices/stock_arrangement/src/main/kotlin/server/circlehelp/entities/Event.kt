@@ -2,16 +2,19 @@ package server.circlehelp.entities
 
 import jakarta.persistence.Column
 import jakarta.persistence.Entity
+import jakarta.persistence.EntityListeners
 import jakarta.persistence.GeneratedValue
 import jakarta.validation.constraints.NotBlank
 import jakarta.validation.constraints.NotNull
 import jakarta.validation.constraints.PastOrPresent
 import jakarta.validation.constraints.Size
 import lombok.EqualsAndHashCode
+import server.circlehelp.services.TableAuditingService
 import java.time.LocalDate
 
 @Entity
 @EqualsAndHashCode(onlyExplicitlyIncluded = true)
+@EntityListeners(TableAuditingService::class)
 class Event(
 
     @NotNull @NotBlank @Size(min = 2, max = 30)
@@ -45,6 +48,19 @@ class Event(
         if (date > endDate) return date.compareTo(endDate)
         else
         return 0
+    }
+
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (javaClass != other?.javaClass) return false
+
+        other as Event
+
+        return id == other.id
+    }
+
+    override fun hashCode(): Int {
+        return id?.hashCode() ?: 0
     }
 
 }

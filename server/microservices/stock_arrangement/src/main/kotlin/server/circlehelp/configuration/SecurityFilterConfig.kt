@@ -1,5 +1,7 @@
 package server.circlehelp.configuration
 
+import org.springframework.boot.actuate.autoconfigure.security.servlet.EndpointRequest
+import org.springframework.boot.actuate.health.HealthEndpoint
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 import org.springframework.security.config.annotation.web.builders.HttpSecurity
@@ -13,6 +15,8 @@ import server.circlehelp.api.baseURL
 import server.circlehelp.api.inventory
 import server.circlehelp.api.management
 import server.circlehelp.api.shelf
+import server.circlehelp.api.submitOrder
+import server.circlehelp.api.submittedOrders
 import server.circlehelp.api.test
 import server.circlehelp.auth.Roles
 
@@ -27,12 +31,21 @@ class SecurityFilterConfig {
     ) : SecurityFilterChain {
         http {
             authorizeHttpRequests {
-                authorize("/admin/*", hasRole(Roles.Admin))
-                authorize("$baseURL$shelf/*", permitAll)
-                authorize("$baseURL$shelf$test/*", permitAll)
-                authorize("$baseURL$inventory", permitAll)
-                authorize("$baseURL$management/*", authenticated)
+                authorize(EndpointRequest.toAnyEndpoint().excluding(HealthEndpoint::class.java)
+                , hasRole(Roles.Admin))
+                authorize("/admin/**", hasRole(Roles.Admin))
+
+                authorize("$baseURL$shelf/*", authenticated)
+                authorize("$baseURL$shelf$test/*", authenticated)
+
+                authorize("$baseURL$inventory", authenticated)
+                authorize("$baseURL$inventory$submitOrder", hasRole(Roles.Employee))
+                authorize("$baseURL$inventory$submittedOrders", hasRole(Roles.Employee))
+
+                authorize("$baseURL/*", authenticated)
+
                 authorize("/kill", permitAll)
+
                 authorize(anyRequest, authenticated)
             }
             csrf {

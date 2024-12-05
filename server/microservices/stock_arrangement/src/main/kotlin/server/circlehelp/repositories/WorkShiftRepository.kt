@@ -5,4 +5,4 @@ import server.circlehelp.entities.WorkShift
 import server.circlehelp.repositories.readonly.ReadonlyRepository
 
 @Repository
-interface WorkShiftRepository: TransactionalJpaRepository<WorkShift, Long>
+interface WorkShiftRepository: TransactionalJpaRepository<WorkShift, String>

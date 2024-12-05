@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.kotlin.readValue
 import jakarta.persistence.Column
 import jakarta.persistence.Entity
+import jakarta.persistence.EntityListeners
 import jakarta.persistence.FetchType
 import jakarta.persistence.Id
 import jakarta.persistence.ManyToOne
@@ -14,6 +15,7 @@ import org.springframework.data.annotation.PersistenceCreator
 import org.springframework.http.converter.json.Jackson2ObjectMapperBuilder
 import server.circlehelp.api.request.OrderApprovalRequest
 import server.circlehelp.services.InventoryService
+import server.circlehelp.services.TableAuditingService
 
 @Entity
 class OrderSubmissionTopic(

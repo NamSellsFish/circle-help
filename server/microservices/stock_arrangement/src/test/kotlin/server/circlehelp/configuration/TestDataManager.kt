@@ -18,7 +18,7 @@ import server.circlehelp.repositories.InventoryRepository
 import server.circlehelp.repositories.PackageProductRepository
 import server.circlehelp.repositories.ProductOnCompartmentRepository
 import server.circlehelp.repositories.ProductRepository
-import server.circlehelp.services.CallerService
+import server.circlehelp.services.TransactionService
 import java.math.BigDecimal
 import java.time.LocalDate
 import java.time.LocalDateTime
@@ -34,7 +34,7 @@ class TestDataManager(
     private val productRepository: ProductRepository,
     private val productOnCompartmentRepository: ProductOnCompartmentRepository,
     private val entityManager: EntityManager,
-    private val callerService: CallerService,
+    private val transactionService: TransactionService,
     private val applicationContext: ApplicationContext
 ) {
 

@@ -2,7 +2,10 @@ package server.circlehelp.api
 
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.ObjectMapper
+import com.github.benmanes.caffeine.cache.Caffeine
 import org.slf4j.LoggerFactory
+import org.springframework.cache.CacheManager
+import org.springframework.cache.annotation.Cacheable
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
 import org.springframework.http.converter.json.Jackson2ObjectMapperBuilder
@@ -15,6 +18,7 @@ import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.ResponseBody
 import org.springframework.web.bind.annotation.ResponseStatus
 import org.springframework.web.bind.annotation.RestController
+import server.circlehelp.annotations.RepeatableReadTransaction
 import server.circlehelp.api.response.CompartmentPosition
 import server.circlehelp.api.response.MoveProductToShelfRequest
 import server.circlehelp.api.response.ProductDetails
@@ -22,8 +26,12 @@ import server.circlehelp.api.response.ProductID
 import server.circlehelp.api.response.ProductList
 import server.circlehelp.api.response.ProductOnCompartmentDto
 import server.circlehelp.api.response.SwapRequest
+import server.circlehelp.entities.PackageProduct
+import server.circlehelp.entities.Product
+import server.circlehelp.entities.ProductOnCompartment
 import server.circlehelp.services.ResponseBodyWriter
 import server.circlehelp.services.ShelfService
+import server.circlehelp.services.TableWatcherBuilderService
 import java.util.Optional
 import kotlin.jvm.optionals.getOrNull
 
@@ -34,22 +42,39 @@ const val shelf = "/shelves"
 @ResponseStatus(HttpStatus.OK)
 class ShelvesController(
     mapperBuilder: Jackson2ObjectMapperBuilder,
-    private val shelfService: ShelfService
+    private val shelfService: ShelfService,
+    private val cacheManager: CacheManager,
+    tableWatcherBuilderService: TableWatcherBuilderService
 ) {
     private val objectMapper = mapperBuilder.build<ObjectMapper>()
     private val logger = LoggerFactory.getLogger(ShelvesController::class.java)
+
+    private val productOnCompartmentTableWatcher = tableWatcherBuilderService.fromClasses(
+        listOf(ProductOnCompartment::class, PackageProduct::class, Product::class),
+        ::productOnCompartmentUpdateEvent
+    )
+
+    private fun productOnCompartmentUpdateEvent() {
+        cacheManager.getCache("shelfController.productOnCompartment")!!.invalidate()
+    }
 
     @GetMapping("/getOne")
     fun getStock(
         @RequestParam(value = "row") rowNumber: Int,
         @RequestParam(value = "compartment") compartmentNumber: Int
     ): ProductDetails? {
+
+
+
         return shelfService.getStock(rowNumber, compartmentNumber)
     }
 
     @GetMapping("/get")
-    fun getStocks(@RequestParam(value = "row") rowNumber: Int): List<ProductOnCompartmentDto> {
-        return shelfService.getStocks(rowNumber)
+    @RepeatableReadTransaction(readOnly = true)
+    fun getStocks(@RequestParam(value = "row") rowNumber: Int): String {
+        productOnCompartmentTableWatcher.checkTables()
+        return cacheManager.getCache("shelfController.productOnCompartment")!!.get(rowNumber,
+            { objectMapper.writeValueAsString(shelfService.getStocks(rowNumber)) })!!
     }
 
     @PostMapping("/autoMove_")
@@ -150,4 +175,8 @@ class ShelvesController(
         return shelfService.printCompartmentsCategoryOrAll(rowNumber)
     }
 
+    @PutMapping("/clearCache")
+    fun clearCache() {
+        shelfService.clearCache()
+    }
 }

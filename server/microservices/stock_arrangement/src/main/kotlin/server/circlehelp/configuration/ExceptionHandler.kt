@@ -2,7 +2,6 @@ package server.circlehelp.configuration
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import lombok.extern.java.Log
-import lombok.extern.slf4j.Slf4j
 import org.springframework.http.HttpStatus
 import org.springframework.http.ProblemDetail
 import org.springframework.http.ResponseEntity
@@ -12,30 +11,47 @@ import org.springframework.security.core.AuthenticationException
 import org.springframework.web.bind.annotation.ExceptionHandler
 import org.springframework.web.bind.annotation.RestControllerAdvice
 import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExceptionHandler
-import server.circlehelp.api.response.ErrorResponseException
+import server.circlehelp.api.response.ErrorResponse
+import server.circlehelp.api.response.ErrorsResponseException
 
 @Log
 @RestControllerAdvice
 class ExceptionHandler(mapperBuilder: Jackson2ObjectMapperBuilder) : ResponseEntityExceptionHandler() {
     private val objectMapper = mapperBuilder.build<ObjectMapper>()
-    @ExceptionHandler(ErrorResponseException::class)
-    fun handle(ex: ErrorResponseException) : ResponseEntity<String> {
+    @ExceptionHandler(ErrorsResponseException::class)
+    fun handle(ex: ErrorsResponseException) : ResponseEntity<String> {
         logger.error(ex.message, ex)
-        return ResponseEntity.status(ex.errorResponse.statusCode)
-            .body(objectMapper.writeValueAsString(ex.errorResponse))
+        return ResponseEntity.status(ex.errorsResponse.statusCode)
+            .body(objectMapper.writeValueAsString(ex.errorsResponse))
     }
 
 
     @ExceptionHandler(AccessDeniedException::class)
-    fun handle(e: AccessDeniedException): ProblemDetail? {
+    fun handle(e: AccessDeniedException): ResponseEntity<String> {
         logger.info(e.message, e)
-        return ProblemDetail.forStatusAndDetail(HttpStatus.FORBIDDEN, e.message)
+        return ResponseEntity.status(HttpStatus.FORBIDDEN)
+            .body(objectMapper.writeValueAsString(ErrorResponse(e.message.orEmpty())))
     }
 
     @ExceptionHandler(AuthenticationException::class)
-    fun handle(e: AuthenticationException): ProblemDetail? {
+    fun handle(e: AuthenticationException): ResponseEntity<String> {
         logger.info(e.message, e)
-        return ProblemDetail.forStatusAndDetail(HttpStatus.UNAUTHORIZED, e.message)
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+            .body(objectMapper.writeValueAsString(ErrorResponse(e.message.orEmpty())))
+    }
+
+    @ExceptionHandler(IllegalArgumentException::class)
+    fun handle(e: IllegalArgumentException): ResponseEntity<String> {
+        logger.info(e.message, e)
+        return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY)
+            .body(objectMapper.writeValueAsString(ErrorResponse(e.message.orEmpty())))
+    }
+
+    @ExceptionHandler(NoSuchElementException::class)
+    fun handle(e: NoSuchElementException): ResponseEntity<String> {
+        logger.info(e.message, e)
+        return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY)
+            .body(objectMapper.writeValueAsString(ErrorResponse(e.message.orEmpty())))
     }
 
     /**

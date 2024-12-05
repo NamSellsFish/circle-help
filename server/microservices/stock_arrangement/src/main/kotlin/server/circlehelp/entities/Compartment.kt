@@ -2,10 +2,10 @@ package server.circlehelp.entities
 
 import jakarta.persistence.Column
 import jakarta.persistence.Entity
+import jakarta.persistence.EntityListeners
 import jakarta.persistence.FetchType
 import jakarta.persistence.GeneratedValue
 import jakarta.persistence.Id
-import jakarta.persistence.JoinColumn
 import jakarta.persistence.ManyToOne
 import jakarta.persistence.Table
 import jakarta.persistence.UniqueConstraint
@@ -13,11 +13,14 @@ import jakarta.validation.constraints.Min
 import jakarta.validation.constraints.Size
 import lombok.EqualsAndHashCode
 import org.jetbrains.annotations.NotNull
+import org.springframework.data.domain.Sort
 import server.circlehelp.api.response.CompartmentPosition
+import server.circlehelp.services.TableAuditingService
 
 @Entity
 @Table(uniqueConstraints = [UniqueConstraint(columnNames = ["layer_id", "number"])])
 @EqualsAndHashCode(onlyExplicitlyIncluded = true)
+@EntityListeners(TableAuditingService::class)
 class Compartment(
     @ManyToOne(optional = false, fetch = FetchType.LAZY) val layer: Layer,
 
@@ -57,5 +60,19 @@ class Compartment(
 
     override fun hashCode(): Int {
         return id?.hashCode() ?: 0
+    }
+
+    override fun toString(): String {
+        return getLocation().toString()
+    }
+
+
+    companion object {
+
+        val layerSort = Sort.by("${Compartment::layer.name}.${Layer::number.name}")
+        val numberSort = Sort.by(Compartment::number.name)
+
+        val layerAscNumberAscSort = layerSort.ascending().and(numberSort.ascending())
+        val numberAscLayerAscSort = numberSort.ascending().and(layerSort.ascending())
     }
 }

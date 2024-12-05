@@ -7,22 +7,19 @@ import com.fasterxml.jackson.module.kotlin.readValue
 import io.reactivex.rxjava3.core.Observable
 import io.reactivex.rxjava3.core.Scheduler
 import io.reactivex.rxjava3.core.Single
-import io.reactivex.rxjava3.schedulers.Schedulers
 import jakarta.persistence.EntityManager
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Qualifier
 import org.springframework.http.HttpStatus
 import org.springframework.http.converter.json.Jackson2ObjectMapperBuilder
-import org.springframework.security.core.context.SecurityContext
 import org.springframework.stereotype.Service
 import server.circlehelp.annotations.RepeatableReadTransaction
 import server.circlehelp.api.complement
-import server.circlehelp.api.request.OrderApprovalRequest
 import server.circlehelp.api.request.PackageProductItem
 import server.circlehelp.api.response.CompartmentInfo
 import server.circlehelp.api.response.CompartmentPosition
-import server.circlehelp.api.response.ErrorResponse
-import server.circlehelp.api.response.ErrorResponseException
+import server.circlehelp.api.response.ErrorsResponse
+import server.circlehelp.api.response.ErrorsResponseException
 import server.circlehelp.api.response.MoveProductToShelfRequest
 import server.circlehelp.api.response.ProductDetails
 import server.circlehelp.api.response.ProductID
@@ -35,20 +32,20 @@ import server.circlehelp.entities.InventoryStock
 import server.circlehelp.entities.PackageProduct
 import server.circlehelp.entities.Product
 import server.circlehelp.entities.ProductOnCompartment
-import server.circlehelp.repositories.InventoryRepository
 import server.circlehelp.repositories.ProductOnCompartmentRepository
-import server.circlehelp.repositories.ProductRepository
-import server.circlehelp.repositories.readonly.ReadonlyArrivedPackageRepository
-import server.circlehelp.repositories.readonly.ReadonlyCompartmentProductCategoryRepository
-import server.circlehelp.repositories.readonly.ReadonlyCompartmentRepository
-import server.circlehelp.repositories.readonly.ReadonlyEventCompartmentRepository
-import server.circlehelp.repositories.readonly.ReadonlyEventProductRepository
-import server.circlehelp.repositories.readonly.ReadonlyFrontCompartmentRepository
+import server.circlehelp.repositories.caches.ArrivedPackageCache
+import server.circlehelp.repositories.caches.CompartmentCache
+import server.circlehelp.repositories.caches.CompartmentProductCategoryCache
+import server.circlehelp.repositories.caches.EventCompartmentCache
+import server.circlehelp.repositories.caches.FrontCompartmentCache
+import server.circlehelp.repositories.caches.InventoryStockCache
+import server.circlehelp.repositories.caches.LayerCache
+import server.circlehelp.repositories.caches.PackageProductCache
+import server.circlehelp.repositories.caches.ProductCache
+import server.circlehelp.repositories.caches.ProductCategorizationCache
+import server.circlehelp.repositories.caches.ProductOnCompartmentCache
 import server.circlehelp.repositories.readonly.ReadonlyInventoryRepository
-import server.circlehelp.repositories.readonly.ReadonlyPackageProductRepository
-import server.circlehelp.repositories.readonly.ReadonlyProductCategorizationRepository
 import server.circlehelp.repositories.readonly.ReadonlyProductOnCompartmentRepository
-import server.circlehelp.repositories.readonly.ReadonlyRowRepository
 import java.util.HashMap
 import java.util.LinkedList
 import kotlin.jvm.Throws
@@ -57,24 +54,24 @@ import kotlin.jvm.optionals.getOrNull
 @Service
 @RepeatableReadTransaction
 class ShelfService(
-    private val productRepository: ProductRepository,
+    private val productCache: ProductCache,
+    private val productOnCompartmentCache: ProductOnCompartmentCache,
     private val readonlyProductOnCompartmentRepository: ReadonlyProductOnCompartmentRepository,
+    private val inventoryStockCache: InventoryStockCache,
     private val readonlyInventoryRepository: ReadonlyInventoryRepository,
-    private val readonlyRowRepository: ReadonlyRowRepository,
-    private val readonlyCompartmentRepository: ReadonlyCompartmentRepository,
-    private val readonlyPackageProductRepository: ReadonlyPackageProductRepository,
-    private val readonlyFrontCompartmentRepository: ReadonlyFrontCompartmentRepository,
-    private val readonlyEventCompartmentRepository: ReadonlyEventCompartmentRepository,
-    private val readonlyCompartmentProductCategoryRepository: ReadonlyCompartmentProductCategoryRepository,
-    private val readonlyProductCategorizationRepository: ReadonlyProductCategorizationRepository,
-    private val readonlyArrivedPackageRepository: ReadonlyArrivedPackageRepository,
-    private val readonlyEventProductRepository: ReadonlyEventProductRepository,
+    private val readonlyRowRepository: LayerCache,
+    private val compartmentCache: CompartmentCache,
+    private val packageProductCache: PackageProductCache,
+    private val frontCompartmentCache: FrontCompartmentCache,
+    private val eventCompartmentCache: EventCompartmentCache,
+    private val compartmentProductCategoryCache: CompartmentProductCategoryCache,
+    private val readonlyProductCategorizationRepository: ProductCategorizationCache,
+    private val arrivedPackageCache: ArrivedPackageCache,
 
-    private val inventoryRepository: InventoryRepository,
     private val productOnCompartmentRepository: ProductOnCompartmentRepository,
 
+
     mapperBuilder: Jackson2ObjectMapperBuilder,
-    private val responseBodyWriter: ResponseBodyWriter,
     private val logic: Logic,
     private val shelfAtomicOpsService: ShelfAtomicOpsService,
     private val blocs: Blocs,
@@ -82,18 +79,35 @@ class ShelfService(
     @Qualifier(BeanQualifiers.computationScheduler) private val computationScheduler: Scheduler,
     @Qualifier(BeanQualifiers.sameThreadScheduler) private val sameThreadScheduler: Scheduler,
     private val entityManager: EntityManager,
+    private val activeEventsService: ActiveEventsService,
+    private val tableAuditingService: TableAuditingService,
+    statusArbiterManager: StatusArbiterManager,
+    private val transactionService: TransactionService
 ) {
     private val objectMapper: ObjectMapper = mapperBuilder.build()
     private val logger = LoggerFactory.getLogger(ShelfService::class.java)
 
+    private val statusDecider = statusArbiterManager.topStatusArbiter
+
     @RepeatableReadTransaction(readOnly = true)
-    @Throws(ErrorResponseException::class)
+    fun clearCache() {
+        tableAuditingService.updateTableAudit(
+            InventoryStock::class,
+            ProductOnCompartment::class
+        )
+
+        inventoryStockCache.update()
+        productOnCompartmentCache.update()
+    }
+
+    @RepeatableReadTransaction(readOnly = true)
+    @Throws(ErrorsResponseException::class)
     fun getStock(
         rowNumber: Int,
         compartmentNumber: Int
     ): ProductDetails? {
 
-        Schedulers.computation()
+        productCache.checkTables()
 
         val compartmentResult =
             logic.getCompartment(
@@ -101,10 +115,10 @@ class ShelfService(
             )
 
         val compartment = compartmentResult.first
-            ?: throw ErrorResponseException(compartmentResult.second!!)
+            ?: throw ErrorsResponseException(compartmentResult.second!!)
 
         val productOnCompartment =
-            readonlyProductOnCompartmentRepository.findByCompartment(compartment)
+            productOnCompartmentCache.findByCompartment(compartment)
                 ?: return null
 
         val packageProduct = productOnCompartment.packageProduct
@@ -121,14 +135,17 @@ class ShelfService(
         )
     }
 
-    @RepeatableReadTransaction(readOnly = false)
+    @RepeatableReadTransaction(readOnly = true)
     fun getStocks(rowNumber: Int) : List<ProductOnCompartmentDto> {
 
         return getStocks2(rowNumber)
     }
 
     private fun getStocks1(rowNumber: Int): List<ProductOnCompartmentDto> {
-        return readonlyProductOnCompartmentRepository
+
+        compartmentProductCategoryCache.checkTables()
+
+        return productOnCompartmentCache.apply { checkTables() }
             .findAll()
             .filter { it.compartment.layer.number == rowNumber }
             .map {
@@ -146,7 +163,8 @@ class ShelfService(
                         it.compartment.compartmentNoFromUserPerspective
                     ),
                     it.status,
-                    readonlyCompartmentProductCategoryRepository.findByCompartment(it.compartment)
+                    compartmentProductCategoryCache
+                        .findByCompartment(it.compartment)
                         ?.productCategory?.name ?: "",
                     ProductDetails(
                         order.orderedPackage.id!!,
@@ -161,19 +179,30 @@ class ShelfService(
     }
 
     private fun getStocks2(rowNumber: Int) : List<ProductOnCompartmentDto> {
-        return readonlyCompartmentRepository
+
+        productOnCompartmentCache.checkTables()
+        compartmentProductCategoryCache.checkTables()
+
+        return compartmentCache.apply { checkTables() }
             .findAll()
             .filter { it.layer.number == rowNumber }
             .map {
 
-                val productOnCompartment = readonlyProductOnCompartmentRepository.findByCompartment(it)
+                val productOnCompartment = productOnCompartmentCache
+                    .findByCompartment(it)
 
-                if (productOnCompartment != null)
-                    logic.updateExpiration(productOnCompartment)
+                /*
+            val activeEventProducts = activeEventsService.activeProductsSet
+
+            if (productOnCompartment != null) {
+                logic.updateEventStatus(productOnCompartment, activeEventProducts)
+                logic.updateExpiration(productOnCompartment)
+            }
+             */
 
                 val order = productOnCompartment?.packageProduct
 
-                val productDetails : ProductDetails? = if (order != null) {
+                val productDetails: ProductDetails? = if (order != null) {
                     ProductDetails(
                         order.orderedPackage.id!!,
                         order.product.sku,
@@ -194,31 +223,37 @@ class ShelfService(
                         it.compartmentNoFromUserPerspective
                     ),
                     productOnCompartment?.status ?: 0,
-                    readonlyCompartmentProductCategoryRepository.findByCompartment(it)
+                    compartmentProductCategoryCache
+                        .findByCompartment(it)
                         ?.productCategory?.name ?: "",
                     productDetails
                 )
+
             }
     }
 
-    @Throws(ErrorResponseException::class)
+    @Throws(ErrorsResponseException::class)
     fun autoMove1(productID: ProductID) : String {
-        val compartment = readonlyCompartmentRepository
+
+        val compartment = compartmentCache.apply { checkTables() }
             .findAll()
             .firstOrNull { readonlyProductOnCompartmentRepository.existsByCompartment(it).complement()  }
             ?: return "No empty compartments found."
 
-        val inventoryStock = readonlyInventoryRepository
+        val inventoryStock = inventoryStockCache.apply { checkTables() }
             .findAllByOrderByPackageProductExpirationDateDesc()
             .firstOrNull { it.packageProduct.product.sku == productID.sku }
-            ?: throw ErrorResponseException(
+            ?: throw ErrorsResponseException(
                 logic.notInInventoryResponse(productID.sku))
 
         val result = shelfAtomicOpsService.moveToShelf(inventoryStock, compartment)
 
+        tableAuditingService.updateTableAudit<ProductOnCompartment>()
+        tableAuditingService.updateTableAudit<InventoryStock>()
+
         if (result.first != null)
             return result.first!!
-        throw ErrorResponseException(result.second!!)
+        throw ErrorsResponseException(result.second!!)
     }
 
     /**
@@ -258,20 +293,25 @@ class ShelfService(
         return autoMoveImpl(slowSellCheck, event, autoMove)
     }
 
-    @RepeatableReadTransaction
-    fun autoFill() {
+    private fun autoFill() {
 
-        val compartmentsToFill = readonlyCompartmentRepository
+        val compartmentsToFill = compartmentCache.apply { checkTables() }
             .findAllByOrderByNumberAscLayerNumberAsc()
             .filter { readonlyProductOnCompartmentRepository.existsByCompartment(it).complement() }
             .toHashSet()
 
         logger.info("Compartments to fill:\n" + compartmentsToFill.map { it.getLocation() }.joinToString("\n", "\n"))
 
-        for (order in readonlyArrivedPackageRepository.findAllByOrderByDateTimeDescIdDesc()) {
+        arrivedPackageCache.checkTables()
+        readonlyProductCategorizationRepository.checkTables()
+        compartmentProductCategoryCache.checkTables()
 
-            val inventoryStocks = readonlyInventoryRepository
+        for (order in arrivedPackageCache
+            .findAllByOrderByDateTimeDescIdDesc()) {
+
+            val inventoryStocks = inventoryStockCache.apply { checkTables() }
                 .findByPackageProductOrderedPackage(order)
+                .filter { logic.isExpiring(it.packageProduct).not() }
                 .sortedBy { it.inventoryQuantity }
 
             val inventoryStockToCategoryIDsMap: Map<InventoryStock, Set<String>> = inventoryStocks.associateWith {
@@ -283,7 +323,7 @@ class ShelfService(
 
             val categoryIDtoCompartmentsMap: Map<String, List<Compartment>> = compartmentsToFill
                 .map {
-                    (readonlyCompartmentProductCategoryRepository
+                    (compartmentProductCategoryCache
                         .findByCompartment(it)
                         ?.productCategory
                         ?.id
@@ -294,7 +334,6 @@ class ShelfService(
 
             for ((categoryID, compartments) in categoryIDtoCompartmentsMap) {
                 logger.info("KEY: $categoryID")
-
 
                 val count = partitionProducts(
                     newInventoryStocks.let {
@@ -334,32 +373,108 @@ class ShelfService(
                              event: Boolean,
                              autoMove: Boolean) : String {
 
+        eventCompartmentCache.checkTables()
+        frontCompartmentCache.checkTables()
+        compartmentProductCategoryCache.checkTables()
+        compartmentProductCategoryCache.checkTables()
+        arrivedPackageCache.checkTables()
+        readonlyRowRepository.checkTables()
+        compartmentCache.checkTables()
+        packageProductCache.checkTables()
+        productCache.checkTables()
+
         removeExpired()
 
         val slowSellResult =
             if (slowSellCheck)
                 arrangeSlowSelling()
             else
-                Observable.just(0).firstOrError()
+                Observable.empty()
         slowSellResult.blockingSubscribe()
 
         val eventResult =
             if (event)
                 arrangeEventStocks()
             else
-                Observable.just(0)
+                Observable.empty()
         eventResult.blockingSubscribe()
 
-        if (autoMove.not()) return ""
+        if (autoMove)
+            autoFill()
 
-        autoFill()
+        tableAuditingService.updateTableAudit(
+            InventoryStock::class,
+            ProductOnCompartment::class
+        )
 
         return ""
     }
 
-    /**
-     * TODO: Algorithm may complete after all products have been processed. [updateFunc] may no longer be necessary.
-     */
+    data class InventoryStockDto(val packageProduct: PackageProduct,
+                                var quantity: Int)
+
+    private data class CompartmentPartitionDto(val packageProduct: PackageProduct,
+                                       val compartments: List<Compartment>)
+
+    private fun partitionProductCounts(stocks: List<InventoryStockDto>,
+                 compartments: List<Compartment>,
+                 updateFunc: (List<InventoryStockDto>) -> List<InventoryStockDto> = { listOf() },
+                 productOnCompartmentFunc: ProductOnCompartment.() -> Unit = {},
+                 entries: List<InventoryStockDto> = stocks,) : Observable<CompartmentPartitionDto> {
+
+        if (entries.isEmpty()) return Observable.empty()
+
+        val entry = entries.first()
+
+        // Fixed: Possible error when size = 1 and stocks.size > 1
+        val partitionLimit = Math.ceilDiv(compartments.size, entries.size)
+
+        logger.info("Compartments:")
+        compartments.forEach{logger.info(it.getLocation().toString())}
+
+        logger.info("Remaining: ${compartments.size}")
+        logger.info("Partition Limit: $partitionLimit")
+        logger.info("Product: ${entry.packageProduct.product.sku}")
+        logger.info("Quantity: ${entry.quantity}")
+
+        return Observable.just(entry)
+            .map {
+                val filledCompartments = compartments.subList(0, it.quantity.coerceAtMost(partitionLimit))
+                CompartmentPartitionDto(entry.packageProduct, filledCompartments)
+            }
+            .flatMap {
+                //logger.info("Current moved count: $it")
+
+                val count = it.compartments.size
+
+                var nextEntries = entries.subList(1, entries.size)
+
+                val newStocks = stocks.let {
+                    if (nextEntries.isEmpty()) {
+                        val result = updateFunc(it)
+                        nextEntries = result
+                        result
+                    }
+                    else
+                        it
+                }
+                Observable.just(it).let {
+                    if (count < compartments.size)
+                        it.concatWith(
+                            partitionProductCounts(
+                                newStocks,
+                                compartments.subList(count, compartments.size),
+                                updateFunc,
+                                productOnCompartmentFunc,
+                                nextEntries
+                            )
+                        )
+                    else
+                        it
+                }
+            }
+    }
+
     private fun partitionProducts(stocks: List<InventoryStock>,
                                   compartments: List<Compartment>,
                                   updateFunc: (List<InventoryStock>) -> List<InventoryStock> = { listOf() },
@@ -416,7 +531,7 @@ class ShelfService(
             }.lastOrError()
     }
 
-    @Throws(ErrorResponseException::class)
+    @Throws(ErrorsResponseException::class)
     fun move(body: JsonNode) : String {
 
         logger.info(body.toPrettyString())
@@ -427,7 +542,11 @@ class ShelfService(
         val srcIterator = Iterable { srcNode.elements() }.map { it.toString() }.iterator()
         val desIterator = Iterable { desNode.elements() }.map { it.toString() }.iterator()
 
-        var errors = ErrorResponse()
+        var errors = ErrorsResponse()
+
+        productCache.checkTables()
+        arrivedPackageCache.checkTables()
+        packageProductCache.checkTables()
 
         while (srcIterator.hasNext() && desIterator.hasNext()) {
 
@@ -441,7 +560,7 @@ class ShelfService(
                 try {
                     desPos = objectMapper.readValue<CompartmentPosition>(des)
                 } catch (ex: DatabindException) {
-                    errors = errors.addAsCopy(ErrorResponse(ex.localizedMessage))
+                    errors = errors.addAsCopy(ErrorsResponse(ex.localizedMessage))
                     continue
                 }
 
@@ -459,7 +578,7 @@ class ShelfService(
                 try {
                     srcObjNode = objectMapper.readTree(src)
                 } catch (ex: DatabindException) {
-                    errors = errors.addAsCopy(ErrorResponse(ex, HttpStatus.BAD_REQUEST))
+                    errors = errors.addAsCopy(ErrorsResponse(ex, HttpStatus.BAD_REQUEST))
                     continue
                 }
 
@@ -468,16 +587,16 @@ class ShelfService(
 
                         val (sku, packageID) = objectMapper.readValue<PackageProductItem>(src)
 
-                        val product = productRepository.findById(sku).get()
-                        val order = readonlyArrivedPackageRepository.findById(packageID).get()
+                        val product = productCache.findById(sku).get()
+                        val order = arrivedPackageCache.findById(packageID).get()
 
                         val packageProduct =
-                            readonlyPackageProductRepository.findByOrderedPackageAndProduct(
+                            packageProductCache.findByOrderedPackageAndProduct(
                                 order, product
                             )!!
 
                         val inventoryStock =
-                            readonlyInventoryRepository.findByPackageProduct(packageProduct)!!
+                            readonlyInventoryRepository.findById(packageProduct.id!!).get()
 
                         shelfAtomicOpsService.moveToShelf(inventoryStock, desCompartment)
 
@@ -495,13 +614,13 @@ class ShelfService(
                             )
                             errors = errors.addAsCopy(result)
                         } else errors = errors.addAsCopy(
-                            ErrorResponse(
+                            ErrorsResponse(
                                 "Malformed Input",
                                 HttpStatus.BAD_REQUEST
                             )
                         )
                 } catch (ex: Exception) {
-                    errors = errors.addAsCopy(ErrorResponse(ex))
+                    errors = errors.addAsCopy(ErrorsResponse(ex))
                     continue
                 }
             }
@@ -512,7 +631,7 @@ class ShelfService(
                 try {
                     srcPos = objectMapper.readValue<CompartmentPosition>(src)
                 } catch (ex: DatabindException) {
-                    errors = errors.addAsCopy(ErrorResponse(ex.localizedMessage))
+                    errors = errors.addAsCopy(ErrorsResponse(ex.localizedMessage))
                     continue
                 }
 
@@ -525,172 +644,334 @@ class ShelfService(
         }
 
         if (srcIterator.hasNext()) {
-            errors = errors.addAsCopy(ErrorResponse("Source List has ${Iterable { srcIterator }.count()} more items than Destination List"))
+            errors = errors.addAsCopy(ErrorsResponse("Source List has ${Iterable { srcIterator }.count()} more items than Destination List"))
         }
 
         if (desIterator.hasNext()) {
-            errors = errors.addAsCopy(ErrorResponse("Destination List has ${Iterable { desIterator }.count()} more items than Source List"))
+            errors = errors.addAsCopy(ErrorsResponse("Destination List has ${Iterable { desIterator }.count()} more items than Source List"))
         }
+
+        tableAuditingService.updateTableAudit(
+            InventoryStock::class,
+            ProductOnCompartment::class
+        )
 
         if (errors.errors.body.any().complement()) {
             return ""
         } else {
-            throw ErrorResponseException(errors)
+            throw ErrorsResponseException(errors)
         }
     }
 
-    @Throws(ErrorResponseException::class)
+    @Throws(ErrorsResponseException::class)
     fun moveToShelf(body: MoveProductToShelfRequest): String {
 
         return moveToShelf(body.src, body.des)
     }
 
-    @Throws(ErrorResponseException::class)
+    @Throws(ErrorsResponseException::class)
     private fun moveToShelf(sku: String, compartmentPosition: CompartmentPosition) : String {
         val inventoryStock =
-            readonlyInventoryRepository
+            inventoryStockCache.apply { checkTables() }
                 .findAllByOrderByPackageProductExpirationDateDesc()
                 .firstOrNull { it.packageProduct.product.sku == sku }
-                ?: throw ErrorResponseException(logic.productNotFoundResponse(sku))
+                ?: throw ErrorsResponseException(logic.productNotFoundResponse(sku))
 
         val compartmentResult = logic.getCompartment(compartmentPosition)
         val compartment = compartmentResult.first
-            ?: throw ErrorResponseException(compartmentResult.second!!)
+            ?: throw ErrorsResponseException(compartmentResult.second!!)
 
         val result = shelfAtomicOpsService.moveToShelf(inventoryStock, compartment)
         if (result.first != null)
             return result.first!!
-        throw ErrorResponseException(result.second!!)
+        throw ErrorsResponseException(result.second!!)
     }
 
-    @Throws(ErrorResponseException::class)
+    @Throws(ErrorsResponseException::class)
     fun swap(body: Iterable<SwapRequest>) : String {
 
-        val errorResponse = ErrorResponse()
+        val errorsResponse = ErrorsResponse()
 
         for (request in body) {
 
-            errorResponse.addAsCopy(shelfAtomicOpsService.swapStockPlacement(request.src, request.des))
+            errorsResponse.addAsCopy(shelfAtomicOpsService.swapStockPlacement(request.src, request.des))
         }
 
-        if (errorResponse.errors.body.any().complement()) {
+        tableAuditingService.updateTableAudit(ProductOnCompartment::class)
+
+        if (errorsResponse.errors.body.any().complement()) {
             return ""
         }
 
-        throw ErrorResponseException(errorResponse)
+        throw ErrorsResponseException(errorsResponse)
     }
 
-    @Throws(ErrorResponseException::class)
+    @Throws(ErrorsResponseException::class)
     fun remove(body: Iterable<CompartmentPosition>) : String {
 
-        val errorResponse = ErrorResponse()
+        val errorsResponse = ErrorsResponse()
 
         for (request in body) {
 
-            errorResponse.addAsCopy(shelfAtomicOpsService.moveToInventory(request).second)
+            errorsResponse.addAsCopy(shelfAtomicOpsService.moveToInventory(request).second)
         }
 
-        if (errorResponse.errors.body.any().complement()) {
+        if (errorsResponse.errors.body.any().complement()) {
             return ""
         }
 
-        throw ErrorResponseException(errorResponse)
+        tableAuditingService.updateTableAudit(
+            InventoryStock::class,
+            ProductOnCompartment::class
+        )
+
+        throw ErrorsResponseException(errorsResponse)
     }
 
     @RepeatableReadTransaction
     fun arrangeToFront(productList: ProductList) : String {
 
-        return validateAndArrangeProductList(productList, readonlyCompartmentRepository.findAll())
+        return validateAndArrangeProductList(productList, compartmentCache.apply { checkTables() }
+            .findAll())
     }
 
     @RepeatableReadTransaction
     fun arrangeEventStocks(productList: ProductList) : String {
 
-        return validateAndArrangeProductList(productList, readonlyEventCompartmentRepository.findAll().map { it.compartment })
+        return validateAndArrangeProductList(productList, eventCompartmentCache.apply { checkTables() }
+            .findAll().map { it.compartment })
     }
 
-    @RepeatableReadTransaction
-    fun arrangeSlowSelling(): Single<Int> {
+    private fun arrangeSlowSelling(): Observable<Unit> {
 
-        shelfAtomicOpsService.compartments.clear()
+        val slowSelling = HashMap<PackageProduct, MutableList<Compartment>>()
+        val targetCompartments = LinkedList<Compartment>()
 
-        val slowSelling = HashMap<PackageProduct, InventoryStock>()
-
-        for (productOnCompartment in readonlyProductOnCompartmentRepository.findAllByStatus(3)) {
-            //if (frontCompartments.isEmpty()) break
-
-            //compartmentsToFill.add(productOnCompartment.compartment)
-
-            //shelfAtomicOpsService.swapStockPlacement(frontCompartments[0], productOnCompartment.compartment)
-
-            val packageProduct = productOnCompartment.packageProduct
-
-            if (readonlyFrontCompartmentRepository.existsByCompartment(productOnCompartment.compartment).not()) {
-
-                slowSelling[packageProduct] =
-                    (slowSelling[packageProduct]
-                        ?: InventoryStock(packageProduct))
-                        .apply { inventoryQuantity++ }
-
-                shelfAtomicOpsService.moveToInventory(productOnCompartment)
-            }
+        return Observable.fromCallable {
+            productOnCompartmentCache.checkTables()
+            frontCompartmentCache.checkTables()
+            Unit
         }
+            .flatMap {
+                productOnCompartmentCache.findAll().let { Observable.fromIterable(it) }
+                    .map { productOnCompartment ->
 
+                        val packageProduct = productOnCompartment.packageProduct
 
-        val frontCompartments = readonlyFrontCompartmentRepository
-            .findAllByOrderByCompartmentNumberAscCompartmentLayerNumberAsc()
-            .map { it.compartment }
+                        if (frontCompartmentCache.existsByCompartment(productOnCompartment.compartment)
+                                .not()
+                        ) {
+                            if (productOnCompartment.status == 3) {
+                                if (slowSelling.contains(packageProduct).not())
+                                    slowSelling[packageProduct] = LinkedList()
+                                slowSelling[packageProduct]!!.add(productOnCompartment.compartment)
+                            }
+                        } else {
+                            if (productOnCompartment.status == 3)
+                                productOnCompartmentRepository.save(
+                                    statusDecider.update(productOnCompartment.with(status = 1))
+                                )
+                            else
+                                targetCompartments.add(productOnCompartment.compartment)
+                        }
+                        Unit
+                    }.count()
+                    .let {
+                        Observable.fromSingle(it)
+                    }
+                    .flatMap {
 
-        shelfAtomicOpsService.moveToInventory(frontCompartments.stream())
+                        logger.info("Front Compartments:\n" + slowSelling.map {
+                            it.value.joinToString {
+                                it.getLocation()
+                                    .toString()
+                            }
+                        }.joinToString("\n", "\n"))
 
-        logger.info("Front Compartments:\n" + frontCompartments.map { it.getLocation() }.joinToString("\n", "\n"))
+                        partitionProductCounts(
+                            slowSelling.entries.toList()
+                                .map { InventoryStockDto(it.key, it.value.size) }
+                                .sortedBy { it.quantity },
+                            targetCompartments,
+                            updateFunc = { listOf() }
+                        ).map {
+                            val srcIterator = slowSelling[it.packageProduct]!!.iterator()
+                            val desIterator = it.compartments.iterator()
 
-        return partitionProducts(
-            slowSelling.values.toList().sortedBy { it.inventoryQuantity } ,
-            frontCompartments,
-            updateFunc =  { listOf() }
-        )
+                            while (srcIterator.hasNext() && desIterator.hasNext()) {
+                                val srcCompartment = srcIterator.next()
+                                val desCompartment = desIterator.next()
+
+                                shelfAtomicOpsService.checkedSwap(
+                                    srcCompartment,
+                                    desCompartment
+                                )
+                            }
+
+                            if (srcIterator.hasNext()) logger.info("Ran out of front compartments.")
+
+                            while (srcIterator.hasNext())
+                                shelfAtomicOpsService.moveToInventory(srcIterator.next())
+
+                        }
+                    }
+            }
     }
 
-    @RepeatableReadTransaction
-    fun arrangeEventStocks(): Observable<Unit> {
+    private class InfiniteIterator<T>(private val func: () -> T) : Iterator<T> {
+        override fun hasNext() = true
 
-        val eventProductSet = logic.activeEventProducts().map { it.product }.toHashSet()
-        var eventCompartments = readonlyEventCompartmentRepository
-            .findAllByOrderByCompartmentNumberAscCompartmentLayerNumberAsc()
-            .map { it.compartment }
+        override fun next() = func()
 
-        shelfAtomicOpsService.moveToInventory(eventCompartments.stream())
+        constructor(obj: T) : this({obj})
+    }
 
-        logger.info("Event Compartments:\n" + eventCompartments.map { it.getLocation() }.joinToString("\n", "\n"))
+    private fun arrangeEventStocks(): Observable<Unit> {
 
-        return Observable.fromIterable(readonlyArrivedPackageRepository
-            .findAllByOrderByDateTimeDescIdDesc())
-            .map {
-                partitionProducts(
-                    readonlyInventoryRepository.findByPackageProductOrderedPackage(it).filter {
-                        eventProductSet.contains(it.packageProduct.product)
-                    }.sortedBy { it.inventoryQuantity },
-                    eventCompartments,
-                    updateFunc = { listOf() },
-                    productOnCompartmentFunc = { status = 4 }
-                )
-            }.map {
-                eventCompartments = eventCompartments.subList(it.blockingGet(), eventCompartments.size)
+        val eventStocks = HashMap<PackageProduct, MutableList<Compartment>>()
+        val targetCompartments = LinkedList<Compartment>()
+        var eventProductSet: Set<Product> = emptySet()
 
-                if (eventCompartments.isEmpty())
-                    return@map
+        return Observable.fromCallable {
+                eventProductSet = activeEventsService.activeProductsSet
+
+                productOnCompartmentCache.checkTables()
+                eventCompartmentCache.checkTables()
+            }
+            .flatMap {
+                productOnCompartmentCache.findAll().let { Observable.fromIterable(it) }
+                    .map { productOnCompartment ->
+                        val packageProduct = productOnCompartment.packageProduct
+
+                        if (eventCompartmentCache.existsByCompartment(productOnCompartment.compartment)
+                                .not()
+                        ) {
+
+                            if (productOnCompartment.status == 4) {
+
+                                if (eventStocks.contains(packageProduct).not())
+                                    eventStocks[packageProduct] = LinkedList()
+                                eventStocks[packageProduct]!!.add(productOnCompartment.compartment)
+                            }
+                        } else {
+                            if (productOnCompartment.status == 4)
+                                productOnCompartmentRepository.save(
+                                    statusDecider.update(productOnCompartment.with(status = 1))
+                                )
+                            else
+                                if (eventProductSet.contains(
+                                        productOnCompartment.packageProduct.product
+                                    ).not()
+                                )
+                                    targetCompartments.add(productOnCompartment.compartment)
+                        }
+                        Unit
+                    }.last(Unit)
+                    .let { Observable.fromSingle(it) }
+                    .flatMap {
+
+                        logger.info("Event Compartments:\n" + eventStocks.map {
+                            it.value.joinToString {
+                                it.getLocation()
+                                    .toString()
+                            }
+                        }.joinToString("\n", "\n"))
+
+                        val targetCompartmentSet = targetCompartments.toHashSet()
+
+                        partitionProductCounts(
+                            eventStocks.entries.toList()
+                                .map { InventoryStockDto(it.key, it.value.size) }
+                                .sortedBy { it.quantity },
+                            targetCompartments,
+                            updateFunc = { listOf() }
+                        )
+                            .map {
+                                val srcIterator = eventStocks[it.packageProduct]!!.iterator()
+                                val desIterator = it.compartments.iterator()
+
+                                while (srcIterator.hasNext() && desIterator.hasNext()) {
+                                    val srcCompartment = srcIterator.next()
+                                    val desCompartment = desIterator.next()
+
+                                    shelfAtomicOpsService.checkedSwap(
+                                        srcCompartment,
+                                        desCompartment
+                                    )
+
+                                    targetCompartmentSet.remove(desCompartment)
+                                }
+                                if (srcIterator.hasNext()) logger.info("Ran out of front compartments.")
+
+                            }.count().let { Observable.fromSingle(it) }
+                            .flatMap {
+                                if (targetCompartmentSet.isEmpty())
+                                    Observable.empty()
+                                else {
+                                    Observable.fromIterable(arrivedPackageCache
+                                        .apply { checkTables() }
+                                        .findAllByOrderByDateTimeDescIdDesc())
+                                        .map {
+                                            partitionProductCounts(
+                                                readonlyInventoryRepository.findByPackageProductOrderedPackage(
+                                                    it
+                                                )
+                                                    .filter {
+                                                        eventProductSet.contains(it.packageProduct.product)
+                                                                && logic.isExpiring(it.packageProduct)
+                                                            .not()
+                                                    }.map {
+                                                        InventoryStockDto(
+                                                            it.packageProduct,
+                                                            it.inventoryQuantity
+                                                        )
+                                                    }
+                                                    .sortedBy { it.quantity },
+                                                targetCompartmentSet.toList(),
+                                                updateFunc = { listOf() }
+                                            )
+                                                .map {
+                                                    val srcIterator =
+                                                        eventStocks[it.packageProduct]!!.iterator()
+                                                    val desIterator = it.compartments.iterator()
+
+                                                    while (srcIterator.hasNext() && desIterator.hasNext()) {
+                                                        val srcCompartment = srcIterator.next()
+                                                        val desCompartment = desIterator.next()
+
+                                                        shelfAtomicOpsService.checkedSwap(
+                                                            srcCompartment,
+                                                            desCompartment
+                                                        )
+
+                                                        targetCompartmentSet.remove(desCompartment)
+                                                    }
+                                                    if (srcIterator.hasNext()) logger.info("Ran out of event compartments while swapping event stocks.")
+                                                }.takeUntil {
+                                                    targetCompartmentSet.isEmpty().also {
+                                                        if (it) logger.info("Ran out of front compartments while placing event stocks.")
+                                                    }
+                                                }
+                                        }.map { Unit }
+                                }
+                            }
+                    }
             }
     }
 
     @RepeatableReadTransaction
     fun removeExpired() {
         logger.info("Moved all expiring products in compartments back to the inventory.")
-        for (compartment in readonlyProductOnCompartmentRepository.findAll()) {
+        for (compartment in productOnCompartmentCache.apply { checkTables() }.findAll()) {
             if (logic.isExpiring(compartment.packageProduct)) {
                 shelfAtomicOpsService.moveToInventory(compartment, false)
             }
         }
+
+        tableAuditingService.updateTableAudit(
+            InventoryStock::class,
+            ProductOnCompartment::class
+        )
     }
 
     @RepeatableReadTransaction
@@ -707,11 +988,16 @@ class ShelfService(
          */
 
         shelfAtomicOpsService.removeAll().blockingSubscribe()
+
+        tableAuditingService.updateTableAudit(
+            InventoryStock::class,
+            ProductOnCompartment::class
+        )
     }
 
 
     @RepeatableReadTransaction(readOnly = true)
-    @Throws(ErrorResponseException::class)
+    @Throws(ErrorsResponseException::class)
     fun printCompartmentsOrAll(rowNumber: Int?) : String {
         return if (rowNumber == null)
             printCompartments()
@@ -721,7 +1007,7 @@ class ShelfService(
 
 
     @RepeatableReadTransaction(readOnly = true)
-    @Throws(ErrorResponseException::class)
+    @Throws(ErrorsResponseException::class)
     fun printCompartmentsCategoryOrAll(rowNumber: Int?) : String {
         return if (rowNumber == null)
             printCompartmentCategories()
@@ -731,39 +1017,41 @@ class ShelfService(
 
 
     @RepeatableReadTransaction(readOnly = true)
-    @Throws(ErrorResponseException::class)
+    @Throws(ErrorsResponseException::class)
     fun printCompartments() : String {
-        return readonlyRowRepository.findAll()
+        return readonlyRowRepository.apply { checkTables() }.findAll()
             .joinToString("\n\n") { "Row ${it.number}:\n" + printCompartments(it.number) }
     }
 
 
     @RepeatableReadTransaction(readOnly = true)
-    @Throws(ErrorResponseException::class)
+    @Throws(ErrorsResponseException::class)
     fun printCompartmentCategories() : String {
-        return readonlyRowRepository.findAll()
+        return readonlyRowRepository.apply { checkTables() }.findAll()
             .joinToString("\n\n") { "Row ${it.number}:\n" + printCompartmentsCategory(it.number) }
     }
 
     @RepeatableReadTransaction(readOnly = true)
-    @Throws(ErrorResponseException::class)
+    @Throws(ErrorsResponseException::class)
     fun printCompartments(rowNumber: Int) : String {
 
-        val layer = readonlyRowRepository.findByNumber(rowNumber)
-            ?: throw ErrorResponseException(logic.rowNotFoundResponse(rowNumber))
+        val layer = readonlyRowRepository.apply { checkTables() }.findByNumber(rowNumber)
+            ?: throw ErrorsResponseException(logic.rowNotFoundResponse(rowNumber))
 
         val emptyText = "______(_)[____]"
 
+        compartmentCache.checkTables()
+
         val message = blocs.printMap({
 
-            val compartment = readonlyCompartmentRepository.findByLayerAndNumber(layer, it)
+            val compartment = compartmentCache.findByLayerAndNumber(layer, it)
 
             compartment?.let {
                 val productOnCompartment = readonlyProductOnCompartmentRepository.findByCompartment(it)
                 productOnCompartment?.packageProduct?.product?.sku
                     ?.plus("(${productOnCompartment.status})")
                     ?.plus("[${
-                        productOnCompartment.packageProduct.id!!.toString().let { 
+                        productOnCompartment.packageProduct.orderedPackage.id!!.toString().let { 
                             "0".repeat((4 - it.length).coerceAtLeast(0)) + it
                         }
                     }]")
@@ -774,20 +1062,22 @@ class ShelfService(
     }
 
     @RepeatableReadTransaction(readOnly = true)
-    @Throws(ErrorResponseException::class)
+    @Throws(ErrorsResponseException::class)
     fun printCompartmentsCategory(rowNumber: Int) : String {
 
-        val layer = readonlyRowRepository.findByNumber(rowNumber)
-            ?: throw ErrorResponseException(logic.rowNotFoundResponse(rowNumber))
+        val layer = readonlyRowRepository.apply{ checkTables() }.findByNumber(rowNumber)
+            ?: throw ErrorsResponseException(logic.rowNotFoundResponse(rowNumber))
 
         val emptyText = "__[___]"
 
+        compartmentCache.checkTables()
+
         return blocs.printMap({
 
-            val compartment = readonlyCompartmentRepository.findByLayerAndNumber(layer, it)
+            val compartment = compartmentCache.findByLayerAndNumber(layer, it)
 
             compartment?.let {
-                readonlyCompartmentProductCategoryRepository.findByCompartment(it)
+                compartmentProductCategoryCache.findByCompartment(it)
                     ?.productCategory?.id
                     ?.plus("[${
                         it.id!!.toString().let { "0".repeat((3 - it.length).coerceAtLeast(0)) + it }
@@ -797,7 +1087,7 @@ class ShelfService(
 
     }
 
-    @Throws(ErrorResponseException::class)
+    @Throws(ErrorsResponseException::class)
     private fun validateAndArrangeProductList(
         productList: ProductList,
         compartments: Iterable<Compartment>
@@ -805,8 +1095,8 @@ class ShelfService(
         val list: LinkedList<Product> = LinkedList()
 
         for (productID in productList.productList) {
-            val product = productRepository.findById(productID).getOrNull()
-                ?: throw ErrorResponseException(logic.productNotFoundResponse(productID))
+            val product = productCache.apply { checkTables() }.findById(productID).getOrNull()
+                ?: throw ErrorsResponseException(logic.productNotFoundResponse(productID))
             list.add(product)
         }
 
@@ -877,10 +1167,4 @@ class ShelfService(
             }
         }
     }
-
-    fun submit(securityContext: SecurityContext, orderApprovalRequest: OrderApprovalRequest) {
-
-
-    }
-
 }

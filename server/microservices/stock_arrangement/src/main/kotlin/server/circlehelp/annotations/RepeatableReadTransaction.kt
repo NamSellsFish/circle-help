@@ -56,7 +56,7 @@ annotation class RepeatableReadTransaction(
      */
     @get:AliasFor(annotation = Transactional::class) val label: Array<String> = [],
     /**
-     * The transaction propagation type.
+     * The transaction propagation attendanceType.
      *
      * Defaults to [Propagation.REQUIRED].
      * @see org.springframework.transaction.interceptor.TransactionAttribute.getPropagationBehavior
@@ -128,8 +128,8 @@ annotation class RepeatableReadTransaction(
      * for a detailed explanation.
      *
      * This is the preferred way to construct a rollback rule (in contrast to
-     * [.rollbackForClassName]), matching the exception type and its subclasses
-     * in a type-safe manner. See the [class-level javadocs][Transactional]
+     * [.rollbackForClassName]), matching the exception attendanceType and its subclasses
+     * in a attendanceType-safe manner. See the [class-level javadocs][Transactional]
      * for further details on rollback rule semantics.
      * @see .rollbackForClassName
      *
@@ -137,7 +137,7 @@ annotation class RepeatableReadTransaction(
      * @see org.springframework.transaction.interceptor.DefaultTransactionAttribute.rollbackOn
      */
     @get:AliasFor(annotation = Transactional::class) val rollbackFor: Array<KClass<out Throwable>>
-    = [ RuntimeException::class, Exception::class ],
+    = [ Throwable::class ],
     /**
      * Defines zero (0) or more exception name patterns (for exceptions which must be a
      * subclass of [Throwable]), indicating which exception types must cause
@@ -158,8 +158,8 @@ annotation class RepeatableReadTransaction(
      * **not** cause a transaction rollback.
      *
      * This is the preferred way to construct a rollback rule (in contrast to
-     * [.noRollbackForClassName]), matching the exception type and its subclasses
-     * in a type-safe manner. See the [class-level javadocs][Transactional]
+     * [.noRollbackForClassName]), matching the exception attendanceType and its subclasses
+     * in a attendanceType-safe manner. See the [class-level javadocs][Transactional]
      * for further details on rollback rule semantics.
      * @see .noRollbackForClassName
      *

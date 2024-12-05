@@ -1,5 +1,7 @@
 package server.circlehelp.configuration
 
+import org.springframework.boot.actuate.web.exchanges.HttpExchangeRepository
+import org.springframework.boot.actuate.web.exchanges.InMemoryHttpExchangeRepository
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 import org.springframework.jdbc.core.JdbcOperations
@@ -35,6 +37,11 @@ import javax.sql.DataSource
 @Configuration
 @EnableWebSecurity
 class SecurityConfig {
+
+    @Bean
+    fun httpExchangeRepository(): HttpExchangeRepository {
+        return InMemoryHttpExchangeRepository()
+    }
 
     @Bean
     fun corsConfigurationSource(): UrlBasedCorsConfigurationSource {

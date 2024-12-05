@@ -1,7 +1,7 @@
 import { useEffect } from 'react'
 import Toast from 'react-native-toast-message'
 
-type HandleResponseProps = { isSuccess: boolean, isError: boolean, error: string, message: string, onSuccess: () => void, onError?: () => void }
+type HandleResponseProps = { isSuccess: boolean, isError: boolean, error: string, message: string, onSuccess?: () => void, onError?: () => void }
 
 export default function HandleResponse({ isSuccess, isError, error, message, onSuccess, onError }: HandleResponseProps) {
 

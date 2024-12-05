@@ -2,7 +2,7 @@ import { PropsWithChildren } from "react";
 import { TouchableOpacity, TouchableOpacityProps, Text } from "react-native";
 import Loading from "./Loading";
 
-type ButtonProps = PropsWithChildren<{ isLoading: boolean, moreContainerClassNames?: string, moreTextClassNames?: string, isRounded?: boolean }> & TouchableOpacityProps
+type ButtonProps = PropsWithChildren<{ isLoading?: boolean, moreContainerClassNames?: string, moreTextClassNames?: string, isRounded?: boolean }> & TouchableOpacityProps
 
 export default function Button({ children, isLoading = false, moreContainerClassNames = '', moreTextClassNames = '', isRounded = false, ...restProps }: ButtonProps) {
     return (

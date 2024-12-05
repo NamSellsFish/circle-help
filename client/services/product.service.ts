@@ -5,50 +5,66 @@ import { EXPO_PUBLIC_BASE_URL } from "~/constants";
 export const productApiSlice = apiSlice.injectEndpoints({
     endpoints: builder => ({
         getProducts: builder.query({
+            query: ({ sortCol, sortOption, minPrice, maxPrice, maxQuantity, minQuantity, page, page_size }) => {
+                const params = {
+                    sortColumn: sortCol,
+                    sortOption,
+                    minPrice,
+                    maxPrice,
+                    minQuantity,
+                    maxQuantity,
+                    page,
+                    page_size,
+                };
 
-            query: ({ }) => {
+                const filteredParams = Object.fromEntries(
+                    Object.entries(params).filter(([key, value]) => value !== '')
+                );
+
                 return {
                     url: `${EXPO_PUBLIC_BASE_URL}/api/inventory`,
                     method: 'GET',
+                    params: filteredParams
                 }
             },
-            serializeQueryArgs: ({ queryArgs, ...rest }) => {
-                const newQueryArgs = { ...queryArgs }
-                if (newQueryArgs.page) {
-                    delete newQueryArgs.page
+            forceRefetch: ({ currentArg, previousArg }) => true,
+            // merge: (currentCache, newItems) => {
+            //     return [...newItems.content]
+            // },
+        }),
+        productSpec: builder.query({
+            query: ({ sku }) => {
+                return {
+                    url: `${EXPO_PUBLIC_BASE_URL}/api/inventory/productSpec?sku=${sku}`,
+                    method: 'GET',
                 }
-                return newQueryArgs
-            },
-            // Always merge incoming data to the cache entry
-            merge: (currentCache, newItems) => {
-                if (currentCache && currentCache !== newItems) {
-                    newItems.unshift(...currentCache)
-                    return {
-                        ...currentCache,
-                        ...newItems,
-                    }
-                }
-                return newItems
-            },
-            // Refetch when the page arg changes
-            forceRefetch({ currentArg, previousArg }) {
-                if (currentArg?.page === 1) return false
-                return currentArg?.page !== previousArg?.page
-            },
-            providesTags: result =>
-                result
-                    ? [
-                        ...result.map(({ sku }: Product) => ({
-                            type: 'Product',
-                            id: sku,
-                        })),
-                        'Product',
-                    ]
-                    : ['Product'],
+            }
+        }),
+        importProduct: builder.mutation({
+            query: ({ body }) => ({
+                url: `${EXPO_PUBLIC_BASE_URL}/api/inventory/importProduct`,
+                method: 'POST',
+                body: body
+            }),
         })
     })
 });
 
 export const {
     useGetProductsQuery,
+    useProductSpecQuery,
+    useImportProductMutation
 } = productApiSlice
+
+const originalUseImportProductMutation = useImportProductMutation;
+
+export const useDebugImportProductMutation = () => {
+    const [mutate, result] = originalUseImportProductMutation();
+
+    const debugMutate = async (arg: any) => {
+        alert(JSON.stringify(arg));
+        return mutate(arg);
+    };
+
+    return [debugMutate, result];
+};

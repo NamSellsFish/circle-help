@@ -6,10 +6,23 @@ export const mockProductApiSlice = apiSlice.injectEndpoints({
     endpoints: builder => ({
         getMockProducts: builder.query({
 
-            query: ({ }) => {
+            query: ({ sortCol, sortOption, minPrice, maxPrice, maxQuantity, minQuantity }) => {
+                const params = {
+                    _sort: sortCol,
+                    _order: sortOption,
+                    price_gte: minPrice,
+                    price_lte: maxPrice,
+                    quantity_gte: minQuantity,
+                    quantity_lte: maxQuantity
+                };
+
+                const filteredParams = Object.fromEntries(
+                    Object.entries(params).filter(([key, value]) => value !== '')
+                );
                 return {
                     url: `${MOCK_EXPO_PUBLIC_BASE_URL}/inventory`,
                     method: 'GET',
+                    params: filteredParams
                 }
             },
             serializeQueryArgs: ({ queryArgs, ...rest }) => {
@@ -19,32 +32,9 @@ export const mockProductApiSlice = apiSlice.injectEndpoints({
                 }
                 return newQueryArgs
             },
-            // Always merge incoming data to the cache entry
             merge: (currentCache, newItems) => {
-                if (currentCache && currentCache !== newItems) {
-                    newItems.unshift(...currentCache)
-                    return {
-                        ...currentCache,
-                        ...newItems,
-                    }
-                }
-                return newItems
+                return [...newItems]
             },
-            // Refetch when the page arg changes
-            forceRefetch({ currentArg, previousArg }) {
-                if (currentArg?.page === 1) return false
-                return currentArg?.page !== previousArg?.page
-            },
-            providesTags: result =>
-                result
-                    ? [
-                        ...result.map(({ sku }: Product) => ({
-                            type: 'Mock Product',
-                            id: sku,
-                        })),
-                        'Mock Product',
-                    ]
-                    : ['Mock Product'],
         })
     })
 });

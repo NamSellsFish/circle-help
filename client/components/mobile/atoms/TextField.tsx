@@ -6,8 +6,8 @@ import DisplayError from './DisplayError'
 type TextFieldProps = {
     errors: FieldError | undefined,
     label?: string,
-    name: "email" | "password",
-    control: Control<{ email: string; password: string; }, any>,
+    name: "email" | "password" | "username" | "packageID" | "supplier" | "sku" | "name" | "price" | "wholesalePrice" | "quantity" | "expirationDate" | "categories" | "note",
+    control: Control | undefined,
     type?: string,
 } & TextInputProps
 
@@ -18,7 +18,6 @@ export default function TextField({ label, errors, name, type = 'text', control,
     //? Handlers
     const onChangeHandler = (value: string) => {
         const inputValue = value
-
         if (type === 'number' && inputValue.length !== 0) {
             field.onChange(parseInt(inputValue))
         } else {
@@ -29,11 +28,11 @@ export default function TextField({ label, errors, name, type = 'text', control,
     //? Render(s)
     return (
         <View className="w-full">
-            {label && <Text className="text-xs text-gray-700 ">{label}</Text>}
+            {label && <Text className="text-xl text-gray-700 ">{label}</Text>}
             <TextInput
                 className="w-full px-3 py-2.5 transition-colors border border-gray-200 rounded-md outline-none bg-zinc-50/30 focus:border-blue-600 leading-none"
                 id={name}
-                value={field?.value}
+                value={field?.value?.toString()}
                 onBlur={field.onBlur}
                 onChangeText={onChangeHandler}
                 ref={field.ref}

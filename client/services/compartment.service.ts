@@ -10,28 +10,35 @@ export const compartmentApiSlice = apiSlice.injectEndpoints({
                     method: 'GET',
                 }
             },
-            forceRefetch({ currentArg, previousArg }) {
-                if (currentArg?.row === 1) return false
-                return currentArg?.row !== previousArg?.row
+            forceRefetch: ({ currentArg, previousArg }) => true,
+            merge: (currentCache, newItems) => {
+                return [...newItems]
             },
-            providesTags: result =>
-                result
-                    ? [
-                        // @ts-ignore
-                        ...result.map(({ position }) => {
-                            const tag = {
-                                type: 'Compartment',
-                                id: position.compartmentNo,
-                            };
-                            return tag;
-                        }),
-                        'Compartment',
-                    ]
-                    : ['Compartment']
-        })
+        }),
+        stockShelvesManually: builder.mutation({
+            query: ({ body }) => ({
+                url: `${EXPO_PUBLIC_BASE_URL}/api/shelves/manualMove`,
+                method: 'POST',
+                body
+            }),
+        }),
+        stockShelvesAutomatically: builder.mutation({
+            query: ({ body }) => ({
+                url: `${EXPO_PUBLIC_BASE_URL}/api/shelves/autoMove`,
+                method: 'POST',
+                params: {
+                    slowSellCheck: body.slowSellCheck,
+                    event: body.event,
+                }
+            }),
+
+        }),
+
     })
 });
 
 export const {
-    useGetCompartmentsQuery
+    useGetCompartmentsQuery,
+    useStockShelvesAutomaticallyMutation,
+    useStockShelvesManuallyMutation
 } = compartmentApiSlice

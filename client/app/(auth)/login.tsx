@@ -2,10 +2,10 @@ import { Stack, useRouter } from "expo-router";
 import { yupResolver } from "@hookform/resolvers/yup";
 import { useForm } from "react-hook-form";
 import { View } from 'react-native';
-import { Button, TextField, HandleResponse } from '~/components'
+import { Button, TextField, HandleResponse, ResponsiveImage } from '~/components'
 import { useEffect } from "react";
-import { logInSchema } from "~/utils/validation";
-import { useAppDispatch } from "~/hooks/useRedux";
+import { logInSchema } from "~/utils";
+import { useAppDispatch, useAppSelector, useUserInfo } from "~/hooks";
 import React from "react";
 import { userLogIn } from "~/store";
 import { useLoginMutation } from "~/services";
@@ -18,7 +18,7 @@ function LoginScreen() {
     const router = useRouter()
 
     //? Login User
-    const [login, { data, isSuccess, isError, isLoading, error }] = useLoginMutation()
+    const [login, { data: userData, isSuccess, isError, isLoading, error }] = useLoginMutation()
 
     //? Form Hook
     const {
@@ -46,8 +46,10 @@ function LoginScreen() {
     }
 
     const onSuccess = () => {
-        dispatch(userLogIn(data?.headers?.getSetCookie()))
-        router.push('/profile')
+        // alert(JSON.stringify(userData?.headers))
+        dispatch(userLogIn(userData?.headers?.get('set-cookie')))
+        // dispatch(userLogIn("token"))
+        router.back()
     }
 
     return (
@@ -55,7 +57,7 @@ function LoginScreen() {
             <Stack.Screen
                 options={{
                     title: 'Login',
-                    headerShown: false,
+                    headerShown: true,
                 }}
             />
             {/*  Handle Login Response */}
@@ -63,21 +65,23 @@ function LoginScreen() {
                 <HandleResponse
                     isError={isError}
                     isSuccess={isSuccess}
-                    // @ts-ignore
-                    error={data.data?.errors?.body[0] || 'Abnormal!'}
-                    message={`Wellcome back ${data?.headers?.getSetCookie()}`}
+                    error={`${JSON.stringify(error)}` || 'Abnormal!'}
+                    //@ts-ignore
+                    message={`Wellcome back ${userData?.data?.user?.username}`}
                     onSuccess={onSuccess}
                 />
             )}
             <View className="h-[100%]  bg-white pt-10">
                 <View className="w-[100vw] px-8 py-6 space-y-4">
                     <View className="space-y-0">
+                        <ResponsiveImage alt={"Circle K"} style={{ width: '100%', opacity: 1, height: '50%', resizeMode: 'contain' }} source={'https://credentials.goldena.vn/wp-content/uploads/2023/06/Circle-K-Symbol.png'} />
                         <TextField
                             errors={formErrors.email}
                             placeholder="Please enter your account email"
                             name="email"
                             keyboardType="email-address"
                             autoCapitalize="none"
+                            //@ts-ignore
                             control={control}
                         />
 
@@ -86,9 +90,10 @@ function LoginScreen() {
                             secureTextEntry
                             placeholder="Please enter your account password"
                             name="password"
+                            //@ts-ignore
                             control={control}
                         />
-                        <Button isLoading={false} onPress={handleSubmit(onSubmit)} moreContainerClassNames="py-3 px-8" moreTextClassNames="text-white">
+                        <Button onPress={handleSubmit(onSubmit)} moreContainerClassNames="py-3 px-8" moreTextClassNames="text-white">
                             Sign In
                         </Button>
                     </View>
@@ -99,13 +104,5 @@ function LoginScreen() {
         </>
     );
 }
-
-// function LoginScreen() {
-//     return (
-//         <div>
-//             <h1>Login</h1>
-//         </div>
-//     )
-// }
 
 export default LoginScreen;

@@ -2,6 +2,7 @@ import { Image, ImageProps } from 'expo-image'
 import { StyleProp, View, ViewStyle } from 'react-native'
 import { blurDataURL } from '~/constants'
 
+
 type ResponsiveImageProps = ImageProps & { dimensions?: string, alt: string, style?: StyleProp<ViewStyle> }
 
 
@@ -10,6 +11,7 @@ export default function ResponsiveImage({ dimensions, alt, style, ...rest }: Res
 
   //? Render(s)
   return (
+
     <View style={style} className={dimensions}>
       <Image
         alt={alt}
@@ -19,5 +21,6 @@ export default function ResponsiveImage({ dimensions, alt, style, ...rest }: Res
         {...rest}
       />
     </View>
+
   )
 }

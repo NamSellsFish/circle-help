@@ -859,6 +859,7 @@
   "inventory": [
     {
       "sku": "SKU001",
+      "packageID": 2,
       "name": "Product A",
       "price": 25.99,
       "wholesalePrice": 22.5,
@@ -873,9 +874,10 @@
     {
       "sku": "SKU002",
       "name": "Product B",
+      "packageID": 17,
       "price": 30.75,
       "wholesalePrice": 27.2,
-      "quantity": 8,
+      "quantity": 1,
       "expirationDate": "2024-12-15",
       "imageUrl": "https://via.placeholder.com/150/33FF57/FFFFFF?text=Product+B",
       "categories": [
@@ -885,6 +887,7 @@
     },
     {
       "sku": "SKU003",
+      "packageID": 83,
       "name": "Product C",
       "price": 18.49,
       "wholesalePrice": 16.3,
@@ -898,6 +901,7 @@
     },
     {
       "sku": "SKU004",
+      "packageID": 61,
       "name": "Product D",
       "price": 22.1,
       "wholesalePrice": 20,
@@ -912,6 +916,7 @@
     {
       "sku": "SKU005",
       "name": "Product E",
+      "packageID": 97,
       "price": 19.99,
       "wholesalePrice": 17.75,
       "quantity": 5,
@@ -924,6 +929,7 @@
     },
     {
       "sku": "SKU006",
+      "packageID": 5,
       "name": "Product F",
       "price": 28.6,
       "wholesalePrice": 25.4,
@@ -937,6 +943,7 @@
     },
     {
       "sku": "SKU007",
+      "packageID": 11,
       "name": "Product G",
       "price": 21.5,
       "wholesalePrice": 19.8,
@@ -950,6 +957,7 @@
     },
     {
       "sku": "SKU008",
+      "packageID": 17,
       "name": "Product H",
       "price": 26.3,
       "wholesalePrice": 24.1,
@@ -963,6 +971,7 @@
     },
     {
       "sku": "SKU009",
+      "packageID": 23,
       "name": "Product I",
       "price": 23.99,
       "wholesalePrice": 21.4,
@@ -976,6 +985,7 @@
     },
     {
       "sku": "SKU010",
+      "packageID": 39,
       "name": "Product J",
       "price": 29.99,
       "wholesalePrice": 26.8,
@@ -986,6 +996,342 @@
         "Food",
         "Snacks"
       ]
+    },
+    {
+      "sku": "SKU011",
+      "packageID": 45,
+      "name": "Product K",
+      "price": 24.99,
+      "wholesalePrice": 22,
+      "quantity": 8,
+      "expirationDate": "2025-06-15",
+      "imageUrl": "https://via.placeholder.com/150/FF5733/FFFFFF?text=Product+K",
+      "categories": [
+        "Electronics",
+        "Gadgets"
+      ]
+    },
+    {
+      "sku": "SKU012",
+      "packageID": 52,
+      "name": "Product L",
+      "price": 31.75,
+      "wholesalePrice": 28.5,
+      "quantity": 4,
+      "expirationDate": "2024-12-25",
+      "imageUrl": "https://via.placeholder.com/150/33FF57/FFFFFF?text=Product+L",
+      "categories": [
+        "Home",
+        "Appliances"
+      ]
+    },
+    {
+      "sku": "SKU013",
+      "packageID": 63,
+      "name": "Product M",
+      "price": 19.49,
+      "wholesalePrice": 17,
+      "quantity": 18,
+      "expirationDate": "2026-03-01",
+      "imageUrl": "https://via.placeholder.com/150/3357FF/FFFFFF?text=Product+M",
+      "categories": [
+        "Sports",
+        "Outdoors"
+      ]
+    },
+    {
+      "sku": "SKU014",
+      "packageID": 72,
+      "name": "Product N",
+      "price": 23.1,
+      "wholesalePrice": 21,
+      "quantity": 11,
+      "expirationDate": "2025-04-10",
+      "imageUrl": "https://via.placeholder.com/150/FF33A6/FFFFFF?text=Product+N",
+      "categories": [
+        "Fashion",
+        "Accessories"
+      ]
+    },
+    {
+      "sku": "SKU015",
+      "packageID": 85,
+      "name": "Product O",
+      "price": 20.99,
+      "wholesalePrice": 18.5,
+      "quantity": 7,
+      "expirationDate": "2024-11-30",
+      "imageUrl": "https://via.placeholder.com/150/FFBD33/FFFFFF?text=Product+O",
+      "categories": [
+        "Beauty",
+        "Skincare"
+      ]
+    },
+    {
+      "sku": "SKU016",
+      "packageID": 92,
+      "name": "Product P",
+      "price": 29.6,
+      "wholesalePrice": 26,
+      "quantity": 6,
+      "expirationDate": "2025-07-25",
+      "imageUrl": "https://via.placeholder.com/150/33FFF3/FFFFFF?text=Product+P",
+      "categories": [
+        "Books",
+        "Education"
+      ]
+    },
+    {
+      "sku": "SKU017",
+      "packageID": 101,
+      "name": "Product Q",
+      "price": 22.5,
+      "wholesalePrice": 20,
+      "quantity": 13,
+      "expirationDate": "2025-01-15",
+      "imageUrl": "https://via.placeholder.com/150/FF33B8/FFFFFF?text=Product+Q",
+      "categories": [
+        "Toys",
+        "Games"
+      ]
+    },
+    {
+      "sku": "SKU018",
+      "packageID": 112,
+      "name": "Product R",
+      "price": 27.3,
+      "wholesalePrice": 24.5,
+      "quantity": 12,
+      "expirationDate": "2025-10-10",
+      "imageUrl": "https://via.placeholder.com/150/FF8C33/FFFFFF?text=Product+R",
+      "categories": [
+        "Garden",
+        "Tools"
+      ]
+    },
+    {
+      "sku": "SKU019",
+      "packageID": 123,
+      "name": "Product S",
+      "price": 24.99,
+      "wholesalePrice": 22,
+      "quantity": 9,
+      "expirationDate": "2024-09-15",
+      "imageUrl": "https://via.placeholder.com/150/33FF8C/FFFFFF?text=Product+S",
+      "categories": [
+        "Office",
+        "Supplies"
+      ]
+    },
+    {
+      "sku": "SKU020",
+      "packageID": 134,
+      "name": "Product T",
+      "price": 30.99,
+      "wholesalePrice": 27.5,
+      "quantity": 10,
+      "expirationDate": "2025-08-20",
+      "imageUrl": "https://via.placeholder.com/150/8C33FF/FFFFFF?text=Product+T",
+      "categories": [
+        "Food",
+        "Snacks"
+      ]
+    },
+    {
+      "sku": "SKU021",
+      "packageID": 145,
+      "name": "Product U",
+      "price": 26.99,
+      "wholesalePrice": 24,
+      "quantity": 5,
+      "expirationDate": "2025-06-30",
+      "imageUrl": "https://via.placeholder.com/150/FF5733/FFFFFF?text=Product+U",
+      "categories": [
+        "Electronics",
+        "Gadgets"
+      ]
+    },
+    {
+      "sku": "SKU022",
+      "packageID": 156,
+      "name": "Product V",
+      "price": 32.75,
+      "wholesalePrice": 29,
+      "quantity": 3,
+      "expirationDate": "2024-12-05",
+      "imageUrl": "https://via.placeholder.com/150/33FF57/FFFFFF?text=Product+V",
+      "categories": [
+        "Home",
+        "Appliances"
+      ]
+    },
+    {
+      "sku": "SKU023",
+      "packageID": 167,
+      "name": "Product W",
+      "price": 20.49,
+      "wholesalePrice": 18,
+      "quantity": 17,
+      "expirationDate": "2026-03-15",
+      "imageUrl": "https://via.placeholder.com/150/3357FF/FFFFFF?text=Product+W",
+      "categories": [
+        "Sports",
+        "Outdoors"
+      ]
+    },
+    {
+      "sku": "SKU024",
+      "packageID": 178,
+      "name": "Product X",
+      "price": 24.1,
+      "wholesalePrice": 21.5,
+      "quantity": 10,
+      "expirationDate": "2025-04-20",
+      "imageUrl": "https://via.placeholder.com/150/FF33A6/FFFFFF?text=Product+X",
+      "categories": [
+        "Fashion",
+        "Accessories"
+      ]
+    },
+    {
+      "sku": "SKU025",
+      "packageID": 189,
+      "name": "Product Y",
+      "price": 21.99,
+      "wholesalePrice": 19,
+      "quantity": 6,
+      "expirationDate": "2024-11-10",
+      "imageUrl": "https://via.placeholder.com/150/FFBD33/FFFFFF?text=Product+Y",
+      "categories": [
+        "Beauty",
+        "Skincare"
+      ]
+    },
+    {
+      "sku": "SKU026",
+      "packageID": 200,
+      "name": "Product Z",
+      "price": 30.6,
+      "wholesalePrice": 27,
+      "quantity": 8,
+      "expirationDate": "2025-07-05",
+      "imageUrl": "https://via.placeholder.com/150/33FFF3/FFFFFF?text=Product+Z",
+      "categories": [
+        "Books",
+        "Education"
+      ]
+    },
+    {
+      "sku": "SKU027",
+      "packageID": 211,
+      "name": "Product AA",
+      "price": 23.5,
+      "wholesalePrice": 21,
+      "quantity": 14,
+      "expirationDate": "2025-01-25",
+      "imageUrl": "https://via.placeholder.com/150/FF33B8/FFFFFF?text=Product+AA",
+      "categories": [
+        "Toys",
+        "Games"
+      ]
+    },
+    {
+      "sku": "SKU028",
+      "packageID": 222,
+      "name": "Product BB",
+      "price": 28.3,
+      "wholesalePrice": 25,
+      "quantity": 11,
+      "expirationDate": "2025-10-20",
+      "imageUrl": "https://via.placeholder.com/150/FF8C33/FFFFFF?text=Product+BB",
+      "categories": [
+        "Garden",
+        "Tools"
+      ]
+    },
+    {
+      "sku": "SKU029",
+      "packageID": 233,
+      "name": "Product CC",
+      "price": 25.99,
+      "wholesalePrice": 23,
+      "quantity": 7,
+      "expirationDate": "2024-09-25",
+      "imageUrl": "https://via.placeholder.com/150/33FF8C/FFFFFF?text=Product+CC",
+      "categories": [
+        "Office",
+        "Supplies"
+      ]
+    },
+    {
+      "sku": "SKU030",
+      "packageID": 244,
+      "name": "Product DD",
+      "price": 31.99,
+      "wholesalePrice": 28,
+      "quantity": 9,
+      "expirationDate": "2025-08-25",
+      "imageUrl": "https://via.placeholder.com/150/8C33FF/FFFFFF?text=Product+DD",
+      "categories": [
+        "Food",
+        "Snacks"
+      ]
     }
+  ],
+  "user": [
+    {
+      "id": 1,
+      "name": "hah",
+      "email": "root@admin.cmm",
+      "password": "",
+      "role": "staff"
+    }
+  ],
+  "products":[
+    {
+        "sku": "DK000O",
+        "name": "Water Bottle",
+        "price": 10.00,
+        "wholesalePrice": 15,
+        "quantity": 100,
+        "imageUrl": "https://placehold.co/400?text=Water+Bottle",
+        "categories": "Drink, Food"
+    },
+{
+  "sku": "DK001P",
+  "name": "Juice Box",
+  "price": 12.00,
+  "wholesalePrice": 10,
+  "quantity": 80,
+  "imageUrl": "https://placehold.co/400?text=Juice+Box",
+  "categories": "Drink, Food"
+},
+{
+  "sku": "DK002Q",
+  "name": "Soda Can",
+  "price": 8.50,
+  "wholesalePrice": 7,
+  "quantity": 150,
+  "imageUrl": "https://placehold.co/400?text=Soda+Can",
+  "categories": "Drink, Beverage"
+},
+{
+  "sku": "DK003R",
+  "name": "Energy Drink",
+  "price": 15.00,
+  "wholesalePrice": 12,
+  "quantity": 60,
+  "imageUrl": "https://placehold.co/400?text=Energy+Drink",
+  "categories": "Drink, Beverage"
+},
+{
+  "sku": "DK004S",
+  "name": "Milk Carton",
+  "price": 9.00,
+  "wholesalePrice": 8,
+  "quantity": 90,
+  "imageUrl": "https://placehold.co/400?text=Milk+Carton",
+  "categories": "Drink, Dairy"
+}
   ]
 }

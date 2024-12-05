@@ -7,4 +7,7 @@ export default interface Product {
     expirationDate: string;
     imageUrl: string;
     categories: string[];
+    packageID: number;
+    expired: boolean;
 }
+

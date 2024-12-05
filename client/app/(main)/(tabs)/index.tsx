@@ -1,12 +1,11 @@
 import { Stack } from "expo-router";
 import React from "react";
 import { Text } from 'react-native';
-import AuthWrapper from "~/components/mobile/atoms/AuthWrapper";
-import { useUserInfo } from "~/hooks";
+// import AuthWrapper from "~/components/mobile/atoms/AuthWrapper";
 
 
 function ProfileScreen() {
-    const { userInfo, isLoading } = useUserInfo()
+    // const { userInfo, isLoading } = useUserInfo()
     return (
         <>
             <Stack.Screen
@@ -14,9 +13,7 @@ function ProfileScreen() {
                     headerShown: false,
                 }}
             />
-            <AuthWrapper>
-                <Text className="text-xl font-bold text-red-400">Hello Sun. Is this your account? {JSON.stringify(userInfo)}</Text>
-            </AuthWrapper>
+            <Text className="text-xl font-bold text-red-400">Hello Sun. Is this your account? </Text>
         </>
     );
 }

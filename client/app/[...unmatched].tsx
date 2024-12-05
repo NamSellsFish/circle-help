@@ -1,7 +1,9 @@
 import { Stack } from 'expo-router'
-import { Text, View, Image, ScrollView } from 'react-native'
+import React from 'react'
+import { Text, View, Image } from 'react-native'
 
 export default function NotFoundPage() {
+    const MOCK_EXPO_PUBLIC_BASE_URL = process.env.MOCK_EXPO_PUBLIC_BASE_URL
     //? Render(s)
     return (
         <>

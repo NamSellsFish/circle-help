@@ -1,0 +1,991 @@
+{
+  "posts": [
+    {
+      "id": 1,
+      "title": "json-server",
+      "author": "typicode"
+    }
+  ],
+  "comments": [
+    {
+      "id": 1,
+      "body": "some comment",
+      "postId": 1
+    }
+  ],
+  "profile": {
+    "name": "typicode"
+  },
+  "itemOnCompartments": [
+    {
+      "id": 1,
+      "position": {
+        "shelfNo": 2,
+        "rowNo": 2,
+        "compartmentNo": 9
+      },
+      "productDetails": {
+        "id": 26,
+        "name": "C",
+        "price": 21,
+        "status": 3,
+        "wholesalePrice": 19,
+        "expirationDate": "2025-01-01"
+      }
+    },
+    {
+      "position": {
+        "shelfNo": 2,
+        "rowNo": 2,
+        "compartmentNo": 18
+      },
+      "productDetails": {
+        "id": 26,
+        "name": "C",
+        "price": 21,
+        "status": 3,
+        "wholesalePrice": 19,
+        "expirationDate": "2025-01-01"
+      }
+    },
+    {
+      "position": {
+        "shelfNo": 2,
+        "rowNo": 3,
+        "compartmentNo": 19
+      },
+      "productDetails": {
+        "id": 26,
+        "name": "D",
+        "price": 21,
+        "wholesalePrice": 19,
+        "expirationDate": "2025-01-01"
+      }
+    },
+    {
+      "position": {
+        "shelfNo": 2,
+        "rowNo": 1,
+        "compartmentNo": 8
+      },
+      "productDetails": {
+        "id": 25,
+        "name": "Sushi",
+        "price": 20,
+        "status": 2,
+        "wholesalePrice": 17,
+        "expirationDate": "2025-01-01"
+      }
+    },
+    {
+      "position": {
+        "shelfNo": 2,
+        "rowNo": 1,
+        "compartmentNo": 9
+      }
+    },
+    {
+      "position": {
+        "shelfNo": 2,
+        "rowNo": 1,
+        "compartmentNo": 28
+      },
+      "productDetails": {
+        "id": 27,
+        "name": "Fried Rice",
+        "price": 17,
+        "status": 4,
+        "wholesalePrice": 14,
+        "expirationDate": "2025-01-01"
+      }
+    },
+    {
+      "position": {
+        "shelfNo": 2,
+        "rowNo": 1,
+        "compartmentNo": 29
+      },
+      "productDetails": {
+        "id": 27,
+        "name": "Fried Rice",
+        "price": 17,
+        "wholesalePrice": 14,
+        "expirationDate": "2025-01-01"
+      }
+    },
+    {
+      "position": {
+        "shelfNo": 2,
+        "rowNo": 1,
+        "compartmentNo": 68
+      },
+      "productDetails": {
+        "id": 2,
+        "name": "Water Bottle",
+        "price": 10,
+        "wholesalePrice": 8,
+        "expirationDate": "2025-01-01"
+      }
+    },
+    {
+      "position": {
+        "shelfNo": 2,
+        "rowNo": 1,
+        "compartmentNo": 69
+      },
+      "productDetails": {
+        "id": 2,
+        "name": "Water Bottle",
+        "price": 10,
+        "wholesalePrice": 8,
+        "expirationDate": "2025-01-01"
+      }
+    },
+    {
+      "position": {
+        "shelfNo": 2,
+        "rowNo": 1,
+        "compartmentNo": 78
+      },
+      "productDetails": {
+        "id": 3,
+        "name": "Orange Juice",
+        "price": 12,
+        "wholesalePrice": 10,
+        "expirationDate": "2025-01-01"
+      }
+    },
+    {
+      "position": {
+        "shelfNo": 2,
+        "rowNo": 1,
+        "compartmentNo": 79
+      },
+      "productDetails": {
+        "id": 3,
+        "name": "Orange Juice",
+        "price": 12,
+        "wholesalePrice": 10,
+        "expirationDate": "2025-01-01"
+      }
+    },
+    {
+      "position": {
+        "shelfNo": 3,
+        "rowNo": 1,
+        "compartmentNo": 88
+      },
+      "productDetails": {
+        "id": 4,
+        "name": "Pepsi",
+        "price": 9,
+        "wholesalePrice": 7,
+        "expirationDate": "2025-01-01"
+      }
+    },
+    {
+      "position": {
+        "shelfNo": 3,
+        "rowNo": 1,
+        "compartmentNo": 89
+      },
+      "productDetails": {
+        "id": 4,
+        "name": "Pepsi",
+        "price": 9,
+        "wholesalePrice": 7,
+        "expirationDate": "2025-01-01"
+      }
+    },
+    {
+      "position": {
+        "shelfNo": 3,
+        "rowNo": 1,
+        "compartmentNo": 98
+      },
+      "productDetails": {
+        "id": 5,
+        "name": "Coca Cola",
+        "price": 9.2,
+        "wholesalePrice": 7.1,
+        "expirationDate": "2025-01-01"
+      }
+    },
+    {
+      "position": {
+        "shelfNo": 3,
+        "rowNo": 1,
+        "compartmentNo": 99
+      },
+      "productDetails": {
+        "id": 5,
+        "name": "Coca Cola",
+        "price": 9.2,
+        "wholesalePrice": 7.1,
+        "expirationDate": "2025-01-01"
+      }
+    },
+    {
+      "position": {
+        "shelfNo": 4,
+        "rowNo": 1,
+        "compartmentNo": 64
+      },
+      "productDetails": {
+        "id": 6,
+        "name": "Hao Hao Noodles",
+        "price": 4.2,
+        "wholesalePrice": 2.1,
+        "expirationDate": "2025-01-01"
+      }
+    },
+    {
+      "position": {
+        "shelfNo": 4,
+        "rowNo": 1,
+        "compartmentNo": 65
+      },
+      "productDetails": {
+        "id": 6,
+        "name": "Hao Hao Noodles",
+        "price": 4.2,
+        "wholesalePrice": 2.1,
+        "expirationDate": "2025-01-01"
+      }
+    },
+    {
+      "position": {
+        "shelfNo": 4,
+        "rowNo": 1,
+        "compartmentNo": 66
+      },
+      "productDetails": {
+        "id": 6,
+        "name": "Hao Hao Noodles",
+        "price": 4.2,
+        "wholesalePrice": 2.1,
+        "expirationDate": "2025-01-01"
+      }
+    },
+    {
+      "position": {
+        "shelfNo": 4,
+        "rowNo": 1,
+        "compartmentNo": 74
+      },
+      "productDetails": {
+        "id": 7,
+        "name": "Vissan Sausage",
+        "price": 6.2,
+        "wholesalePrice": 4.3,
+        "expirationDate": "2025-01-01"
+      }
+    },
+    {
+      "position": {
+        "shelfNo": 4,
+        "rowNo": 1,
+        "compartmentNo": 75
+      },
+      "productDetails": {
+        "id": 7,
+        "name": "Vissan Sausage",
+        "price": 6.2,
+        "wholesalePrice": 4.3,
+        "expirationDate": "2025-01-01"
+      }
+    },
+    {
+      "position": {
+        "shelfNo": 4,
+        "rowNo": 1,
+        "compartmentNo": 76
+      },
+      "productDetails": {
+        "id": 7,
+        "name": "Vissan Sausage",
+        "price": 6.2,
+        "wholesalePrice": 4.3,
+        "expirationDate": "2025-01-01"
+      }
+    },
+    {
+      "position": {
+        "shelfNo": 4,
+        "rowNo": 1,
+        "compartmentNo": 84
+      },
+      "productDetails": {
+        "id": 8,
+        "name": "Dry fruit and Vegetable",
+        "price": 11.1,
+        "wholesalePrice": 7.6,
+        "expirationDate": "2025-01-01"
+      }
+    },
+    {
+      "position": {
+        "shelfNo": 4,
+        "rowNo": 1,
+        "compartmentNo": 85
+      },
+      "productDetails": {
+        "id": 8,
+        "name": "Dry fruit and Vegetable",
+        "price": 11.1,
+        "wholesalePrice": 7.6,
+        "expirationDate": "2025-01-01"
+      }
+    },
+    {
+      "position": {
+        "shelfNo": 4,
+        "rowNo": 1,
+        "compartmentNo": 86
+      },
+      "productDetails": {
+        "id": 8,
+        "name": "Dry fruit and Vegetable",
+        "price": 11.1,
+        "wholesalePrice": 7.6,
+        "expirationDate": "2025-01-01"
+      }
+    },
+    {
+      "position": {
+        "shelfNo": 5,
+        "rowNo": 1,
+        "compartmentNo": 92
+      },
+      "productDetails": {
+        "id": 9,
+        "name": "Nivea Facial Cleanser",
+        "price": 15.4,
+        "wholesalePrice": 12.3,
+        "expirationDate": "2025-01-01"
+      }
+    },
+    {
+      "position": {
+        "shelfNo": 5,
+        "rowNo": 1,
+        "compartmentNo": 91
+      },
+      "productDetails": {
+        "id": 9,
+        "name": "Nivea Facial Cleanser",
+        "price": 15.4,
+        "wholesalePrice": 12.3,
+        "expirationDate": "2025-01-01"
+      }
+    },
+    {
+      "position": {
+        "shelfNo": 5,
+        "rowNo": 1,
+        "compartmentNo": 90
+      },
+      "productDetails": {
+        "id": 9,
+        "name": "Nivea Facial Cleanser",
+        "price": 15.4,
+        "wholesalePrice": 12.3,
+        "expirationDate": "2025-01-01"
+      }
+    },
+    {
+      "position": {
+        "shelfNo": 5,
+        "rowNo": 1,
+        "compartmentNo": 82
+      },
+      "productDetails": {
+        "id": 10,
+        "name": "Oxy Facial Cleanser",
+        "price": 15.6,
+        "wholesalePrice": 14.3,
+        "expirationDate": "2025-01-01"
+      }
+    },
+    {
+      "position": {
+        "shelfNo": 5,
+        "rowNo": 1,
+        "compartmentNo": 81
+      },
+      "productDetails": {
+        "id": 10,
+        "name": "Oxy Facial Cleanser",
+        "price": 15.6,
+        "wholesalePrice": 14.3,
+        "expirationDate": "2025-01-01"
+      }
+    },
+    {
+      "position": {
+        "shelfNo": 5,
+        "rowNo": 1,
+        "compartmentNo": 80
+      },
+      "productDetails": {
+        "id": 10,
+        "name": "Oxy Facial Cleanser",
+        "price": 15.6,
+        "wholesalePrice": 14.3,
+        "expirationDate": "2025-01-01"
+      }
+    },
+    {
+      "position": {
+        "shelfNo": 6,
+        "rowNo": 1,
+        "compartmentNo": 72
+      },
+      "productDetails": {
+        "id": 11,
+        "name": "Colgate Toothpaste",
+        "price": 17.8,
+        "wholesalePrice": 16.3,
+        "expirationDate": "2025-01-01"
+      }
+    },
+    {
+      "position": {
+        "shelfNo": 6,
+        "rowNo": 1,
+        "compartmentNo": 71
+      },
+      "productDetails": {
+        "id": 11,
+        "name": "Colgate Toothpaste",
+        "price": 17.8,
+        "wholesalePrice": 16.3,
+        "expirationDate": "2025-01-01"
+      }
+    },
+    {
+      "position": {
+        "shelfNo": 6,
+        "rowNo": 1,
+        "compartmentNo": 70
+      },
+      "productDetails": {
+        "id": 11,
+        "name": "Colgate Toothpaste",
+        "price": 17.8,
+        "wholesalePrice": 16.3,
+        "expirationDate": "2025-01-01"
+      }
+    },
+    {
+      "position": {
+        "shelfNo": 6,
+        "rowNo": 1,
+        "compartmentNo": 62
+      },
+      "productDetails": {
+        "id": 12,
+        "name": "P/S Toothpaste",
+        "price": 18.8,
+        "wholesalePrice": 17.7,
+        "expirationDate": "2025-01-01"
+      }
+    },
+    {
+      "position": {
+        "shelfNo": 6,
+        "rowNo": 1,
+        "compartmentNo": 61
+      },
+      "productDetails": {
+        "id": 12,
+        "name": "P/S Toothpaste",
+        "price": 18.8,
+        "wholesalePrice": 17.7,
+        "expirationDate": "2025-01-01"
+      }
+    },
+    {
+      "position": {
+        "shelfNo": 6,
+        "rowNo": 1,
+        "compartmentNo": 60
+      },
+      "productDetails": {
+        "id": 12,
+        "name": "P/S Toothpaste",
+        "price": 18.8,
+        "wholesalePrice": 17.7,
+        "expirationDate": "2025-01-01"
+      }
+    },
+    {
+      "position": {
+        "shelfNo": 7,
+        "rowNo": 1,
+        "compartmentNo": 52
+      },
+      "productDetails": {
+        "id": 13,
+        "name": "Oishi Snack",
+        "price": 13.4,
+        "wholesalePrice": 10.7,
+        "expirationDate": "2025-01-01"
+      }
+    },
+    {
+      "position": {
+        "shelfNo": 7,
+        "rowNo": 1,
+        "compartmentNo": 51
+      },
+      "productDetails": {
+        "id": 13,
+        "name": "Oishi Snack",
+        "price": 13.4,
+        "wholesalePrice": 10.7,
+        "expirationDate": "2025-01-01"
+      }
+    },
+    {
+      "position": {
+        "shelfNo": 7,
+        "rowNo": 1,
+        "compartmentNo": 50
+      },
+      "productDetails": {
+        "id": 13,
+        "name": "Oishi Snack",
+        "price": 13.4,
+        "wholesalePrice": 10.7,
+        "expirationDate": "2025-01-01"
+      }
+    },
+    {
+      "position": {
+        "shelfNo": 7,
+        "rowNo": 1,
+        "compartmentNo": 42
+      },
+      "productDetails": {
+        "id": 14,
+        "name": "Lay's Potato Snack",
+        "price": 14.5,
+        "wholesalePrice": 11.7,
+        "expirationDate": "2025-01-01"
+      }
+    },
+    {
+      "position": {
+        "shelfNo": 7,
+        "rowNo": 1,
+        "compartmentNo": 41
+      },
+      "productDetails": {
+        "id": 14,
+        "name": "Lay's Potato Snack",
+        "price": 14.5,
+        "wholesalePrice": 11.7,
+        "expirationDate": "2025-01-01"
+      }
+    },
+    {
+      "position": {
+        "shelfNo": 7,
+        "rowNo": 1,
+        "compartmentNo": 40
+      },
+      "productDetails": {
+        "id": 15,
+        "name": "Lay's Potato Snack",
+        "price": 14.5,
+        "wholesalePrice": 11.7,
+        "expirationDate": "2025-01-01"
+      }
+    },
+    {
+      "position": {
+        "shelfNo": 8,
+        "rowNo": 1,
+        "compartmentNo": 32
+      },
+      "productDetails": {
+        "id": 15,
+        "name": "KitKat",
+        "price": 20.1,
+        "wholesalePrice": 17.8,
+        "expirationDate": "2025-01-01"
+      }
+    },
+    {
+      "position": {
+        "shelfNo": 8,
+        "rowNo": 1,
+        "compartmentNo": 31
+      },
+      "productDetails": {
+        "id": 15,
+        "name": "KitKat",
+        "price": 20.1,
+        "wholesalePrice": 17.8,
+        "expirationDate": "2025-01-01"
+      }
+    },
+    {
+      "position": {
+        "shelfNo": 8,
+        "rowNo": 1,
+        "compartmentNo": 30
+      },
+      "productDetails": {
+        "id": 16,
+        "name": "KitKat",
+        "price": 20.1,
+        "wholesalePrice": 17.8,
+        "expirationDate": "2025-01-01"
+      }
+    },
+    {
+      "position": {
+        "shelfNo": 8,
+        "rowNo": 1,
+        "compartmentNo": 22
+      },
+      "productDetails": {
+        "id": 16,
+        "name": "Carman's Nut Bar",
+        "price": 21.7,
+        "wholesalePrice": 20.4,
+        "expirationDate": "2025-01-01"
+      }
+    },
+    {
+      "position": {
+        "shelfNo": 8,
+        "rowNo": 1,
+        "compartmentNo": 21
+      },
+      "productDetails": {
+        "id": 16,
+        "name": "Carman's Nut Bar",
+        "price": 21.7,
+        "wholesalePrice": 20.4,
+        "expirationDate": "2025-01-01"
+      }
+    },
+    {
+      "position": {
+        "shelfNo": 8,
+        "rowNo": 1,
+        "compartmentNo": 20
+      },
+      "productDetails": {
+        "id": 16,
+        "name": "Carman's Nut Bar",
+        "price": 21.7,
+        "wholesalePrice": 20.4,
+        "expirationDate": "2025-01-01"
+      }
+    },
+    {
+      "position": {
+        "shelfNo": 9,
+        "rowNo": 1,
+        "compartmentNo": 12
+      },
+      "productDetails": {
+        "id": 17,
+        "name": "Oreo",
+        "price": 11.3,
+        "wholesalePrice": 7.9,
+        "expirationDate": "2025-01-01"
+      }
+    },
+    {
+      "position": {
+        "shelfNo": 9,
+        "rowNo": 1,
+        "compartmentNo": 11
+      },
+      "productDetails": {
+        "id": 17,
+        "name": "Oreo",
+        "price": 11.3,
+        "wholesalePrice": 7.9,
+        "expirationDate": "2025-01-01"
+      }
+    },
+    {
+      "position": {
+        "shelfNo": 9,
+        "rowNo": 1,
+        "compartmentNo": 10
+      },
+      "productDetails": {
+        "id": 17,
+        "name": "Oreo",
+        "price": 11.3,
+        "wholesalePrice": 7.9,
+        "expirationDate": "2025-01-01"
+      }
+    },
+    {
+      "position": {
+        "shelfNo": 9,
+        "rowNo": 1,
+        "compartmentNo": 2
+      },
+      "productDetails": {
+        "id": 18,
+        "name": "M&M Chocolate",
+        "price": 9.1,
+        "wholesalePrice": 6,
+        "expirationDate": "2025-01-01"
+      }
+    },
+    {
+      "position": {
+        "shelfNo": 9,
+        "rowNo": 1,
+        "compartmentNo": 1
+      },
+      "productDetails": {
+        "id": 18,
+        "name": "M&M Chocolate",
+        "price": 9.1,
+        "wholesalePrice": 6,
+        "expirationDate": "2025-01-01"
+      }
+    },
+    {
+      "position": {
+        "shelfNo": 9,
+        "rowNo": 1,
+        "compartmentNo": 0
+      },
+      "productDetails": {
+        "id": 18,
+        "name": "M&M Chocolate",
+        "price": 9.1,
+        "wholesalePrice": 6,
+        "expirationDate": "2025-01-01"
+      }
+    },
+    {
+      "position": {
+        "shelfNo": 10,
+        "rowNo": 1,
+        "compartmentNo": 14
+      },
+      "productDetails": {
+        "id": 19,
+        "name": "Haloween Skeleton Figure",
+        "price": 33.5,
+        "wholesalePrice": 30,
+        "expirationDate": "2025-01-01"
+      }
+    },
+    {
+      "position": {
+        "shelfNo": 10,
+        "rowNo": 1,
+        "compartmentNo": 15
+      },
+      "productDetails": {
+        "id": 20,
+        "name": "Haloween Pumpkin Cake",
+        "price": 101.2,
+        "wholesalePrice": 96.3,
+        "expirationDate": "2025-01-01"
+      }
+    },
+    {
+      "position": {
+        "shelfNo": 10,
+        "rowNo": 1,
+        "compartmentNo": 16
+      },
+      "productDetails": {
+        "id": 21,
+        "name": "Haloween Candle",
+        "price": 13.2,
+        "wholesalePrice": 10.7,
+        "expirationDate": "2025-01-01"
+      }
+    },
+    {
+      "position": {
+        "shelfNo": 10,
+        "rowNo": 1,
+        "compartmentNo": 24
+      },
+      "productDetails": {
+        "id": 22,
+        "name": "Haloween Bottle",
+        "price": 15.4,
+        "wholesalePrice": 13.9,
+        "expirationDate": "2025-01-01"
+      }
+    },
+    {
+      "position": {
+        "shelfNo": 10,
+        "rowNo": 1,
+        "compartmentNo": 25
+      },
+      "productDetails": {
+        "id": 23,
+        "name": "Haloween Blanket",
+        "price": 35.7,
+        "wholesalePrice": 30.1,
+        "expirationDate": "2025-01-01"
+      }
+    },
+    {
+      "position": {
+        "shelfNo": 10,
+        "rowNo": 1,
+        "compartmentNo": 26
+      },
+      "productDetails": {
+        "id": 24,
+        "name": "Haloween Candy",
+        "price": 8.7,
+        "wholesalePrice": 5.5,
+        "expirationDate": "2025-01-01"
+      }
+    }
+  ],
+  "inventory": [
+    {
+      "sku": "SKU001",
+      "name": "Product A",
+      "price": 25.99,
+      "wholesalePrice": 22.5,
+      "quantity": 15,
+      "expirationDate": "2025-05-01",
+      "imageUrl": "https://via.placeholder.com/150/FF5733/FFFFFF?text=Product+A",
+      "categories": [
+        "Electronics",
+        "Gadgets"
+      ]
+    },
+    {
+      "sku": "SKU002",
+      "name": "Product B",
+      "price": 30.75,
+      "wholesalePrice": 27.2,
+      "quantity": 8,
+      "expirationDate": "2024-12-15",
+      "imageUrl": "https://via.placeholder.com/150/33FF57/FFFFFF?text=Product+B",
+      "categories": [
+        "Home",
+        "Appliances"
+      ]
+    },
+    {
+      "sku": "SKU003",
+      "name": "Product C",
+      "price": 18.49,
+      "wholesalePrice": 16.3,
+      "quantity": 20,
+      "expirationDate": "2026-02-28",
+      "imageUrl": "https://via.placeholder.com/150/3357FF/FFFFFF?text=Product+C",
+      "categories": [
+        "Sports",
+        "Outdoors"
+      ]
+    },
+    {
+      "sku": "SKU004",
+      "name": "Product D",
+      "price": 22.1,
+      "wholesalePrice": 20,
+      "quantity": 12,
+      "expirationDate": "2025-03-10",
+      "imageUrl": "https://via.placeholder.com/150/FF33A6/FFFFFF?text=Product+D",
+      "categories": [
+        "Fashion",
+        "Accessories"
+      ]
+    },
+    {
+      "sku": "SKU005",
+      "name": "Product E",
+      "price": 19.99,
+      "wholesalePrice": 17.75,
+      "quantity": 5,
+      "expirationDate": "2024-11-20",
+      "imageUrl": "https://via.placeholder.com/150/FFBD33/FFFFFF?text=Product+E",
+      "categories": [
+        "Beauty",
+        "Skincare"
+      ]
+    },
+    {
+      "sku": "SKU006",
+      "name": "Product F",
+      "price": 28.6,
+      "wholesalePrice": 25.4,
+      "quantity": 7,
+      "expirationDate": "2025-07-15",
+      "imageUrl": "https://via.placeholder.com/150/33FFF3/FFFFFF?text=Product+F",
+      "categories": [
+        "Books",
+        "Education"
+      ]
+    },
+    {
+      "sku": "SKU007",
+      "name": "Product G",
+      "price": 21.5,
+      "wholesalePrice": 19.8,
+      "quantity": 10,
+      "expirationDate": "2025-01-01",
+      "imageUrl": "https://via.placeholder.com/150/FF33B8/FFFFFF?text=Product+G",
+      "categories": [
+        "Toys",
+        "Games"
+      ]
+    },
+    {
+      "sku": "SKU008",
+      "name": "Product H",
+      "price": 26.3,
+      "wholesalePrice": 24.1,
+      "quantity": 14,
+      "expirationDate": "2025-09-30",
+      "imageUrl": "https://via.placeholder.com/150/FF8C33/FFFFFF?text=Product+H",
+      "categories": [
+        "Garden",
+        "Tools"
+      ]
+    },
+    {
+      "sku": "SKU009",
+      "name": "Product I",
+      "price": 23.99,
+      "wholesalePrice": 21.4,
+      "quantity": 6,
+      "expirationDate": "2024-10-01",
+      "imageUrl": "https://via.placeholder.com/150/33FF8C/FFFFFF?text=Product+I",
+      "categories": [
+        "Office",
+        "Supplies"
+      ]
+    },
+    {
+      "sku": "SKU010",
+      "name": "Product J",
+      "price": 29.99,
+      "wholesalePrice": 26.8,
+      "quantity": 9,
+      "expirationDate": "2025-08-05",
+      "imageUrl": "https://via.placeholder.com/150/8C33FF/FFFFFF?text=Product+J",
+      "categories": [
+        "Food",
+        "Snacks"
+      ]
+    }
+  ]
+}

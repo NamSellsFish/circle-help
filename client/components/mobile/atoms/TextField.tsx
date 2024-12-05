@@ -34,7 +34,6 @@ export default function TextField({ label, errors, name, type = 'text', control,
                 className="w-full px-3 py-2.5 transition-colors border border-gray-200 rounded-md outline-none bg-zinc-50/30 focus:border-blue-600 leading-none"
                 id={name}
                 value={field?.value}
-                // ISSUE: Nếu comment thế này mà không bị lỗi gì thì bỏ luôn name={field.name}
                 onBlur={field.onBlur}
                 onChangeText={onChangeHandler}
                 ref={field.ref}

@@ -5,10 +5,11 @@ import { View } from 'react-native';
 import { Button, TextField, HandleResponse } from '~/components'
 import { useEffect } from "react";
 import { logInSchema } from "~/utils/validation";
-import { useLoginMutation } from "~/services/user.service";
 import { useAppDispatch } from "~/hooks/useRedux";
-import { userLogIn } from "~/store";
 import React from "react";
+import { userLogIn } from "~/store";
+import { useLoginMutation } from "~/services";
+
 
 function LoginScreen() {
 
@@ -45,7 +46,7 @@ function LoginScreen() {
     }
 
     const onSuccess = () => {
-        dispatch(userLogIn(data.user.token))
+        dispatch(userLogIn(data?.headers?.getSetCookie()))
         router.push('/profile')
     }
 
@@ -63,8 +64,8 @@ function LoginScreen() {
                     isError={isError}
                     isSuccess={isSuccess}
                     // @ts-ignore
-                    error={error?.data?.detail || 'Abnormal!'}
-                    message={`Wellcome back ${data?.user.email}`}
+                    error={data.data?.errors?.body[0] || 'Abnormal!'}
+                    message={`Wellcome back ${data?.headers?.getSetCookie()}`}
                     onSuccess={onSuccess}
                 />
             )}
@@ -87,7 +88,7 @@ function LoginScreen() {
                             name="password"
                             control={control}
                         />
-                        <Button isLoading={false} onPress={handleSubmit(onSubmit)}>
+                        <Button isLoading={false} onPress={handleSubmit(onSubmit)} moreContainerClassNames="py-3 px-8" moreTextClassNames="text-white">
                             Sign In
                         </Button>
                     </View>
@@ -98,5 +99,13 @@ function LoginScreen() {
         </>
     );
 }
+
+// function LoginScreen() {
+//     return (
+//         <div>
+//             <h1>Login</h1>
+//         </div>
+//     )
+// }
 
 export default LoginScreen;
